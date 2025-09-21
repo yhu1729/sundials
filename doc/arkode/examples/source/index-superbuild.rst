@@ -36,7 +36,6 @@ ARKODE Examples
    c_parhyp
    cpp_serial
    cpp_parallel
-   References
 
 ..
   Remove F77 interface examples
