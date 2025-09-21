@@ -204,6 +204,7 @@ SUNDIALS License and Notices
    :hidden:
 
    examples/arkode/index.rst
+   examples/kinsol/index-superbuild.rst
 
 .. toctree::
    :caption: DEVELOPMENT
