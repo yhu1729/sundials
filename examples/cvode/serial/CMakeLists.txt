@@ -40,7 +40,7 @@ set(CVODE_examples
     "cvRoberts_dns_negsol\;\;exclude-single"
     "cvRoberts_dns_uw\;\;develop"
     "cvRocket_dns\;\;develop"
-    "cvStackTrace\;\;develop")
+    "cvStackTrace\;--no-print-trace\;develop")
 
 if(SUNDIALS_ENABLE_MONITORING)
   list(APPEND CVODE_examples "cvKrylovDemo_ls\;0 1\;develop")

@@ -19,8 +19,8 @@
  * This example shows how to enable the optional SUNContext stack trace
  * feature and inspect the logical SUNDIALS call path after an error.
  *
- * By default the example prints a stable summary. Run with --print-trace
- * to print the full stack trace, including source file and line locations.
+ * By default the example prints the full stack trace, including source file
+ * and line locations. Run with --no-print-trace to print a stable summary.
  * -----------------------------------------------------------------*/
 
 #include <cvode/cvode.h>
@@ -41,11 +41,11 @@ int main(int argc, char* argv[])
   int nframes                      = 0;
   int retval                       = 0;
   int status                       = 1;
-  sunbooleantype print_trace       = SUNFALSE;
+  sunbooleantype print_trace       = SUNTRUE;
 
-  if ((argc > 1) && (strcmp(argv[1], "--print-trace") == 0))
+  if ((argc > 1) && (strcmp(argv[1], "--no-print-trace") == 0))
   {
-    print_trace = SUNTRUE;
+    print_trace = SUNFALSE;
   }
 
   retval = SUNContext_Create(SUN_COMM_NULL, &sunctx);
