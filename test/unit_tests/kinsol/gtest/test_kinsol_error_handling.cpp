@@ -44,6 +44,10 @@ protected:
 
 TEST_F(KINErrConditionTest, WarningIsPrinted)
 {
+  const SUNStackTraceFrame* frames = nullptr;
+  int count                       = -1;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
   SUNErrCode err = SUNLogger_SetWarningFilename(logger, errfile.c_str());
   ASSERT_EQ(err, SUN_SUCCESS);
   KINMemRec* kin_mem = (KINMemRec*)kinmem;
@@ -58,10 +62,17 @@ TEST_F(KINErrConditionTest, WarningIsPrinted)
 #else
   EXPECT_EQ(output, "");
 #endif
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+  EXPECT_NE(frames, nullptr);
+  EXPECT_EQ(count, 0);
 }
 
 TEST_F(KINErrConditionTest, ErrorIsPrinted)
 {
+  const SUNStackTraceFrame* frames = nullptr;
+  int count                       = 0;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
   SUNErrCode err = SUNLogger_SetErrorFilename(logger, errfile.c_str());
   ASSERT_EQ(err, SUN_SUCCESS);
   // -1 is an illegal value
@@ -75,4 +86,11 @@ TEST_F(KINErrConditionTest, ErrorIsPrinted)
 #else
   EXPECT_EQ(output, "");
 #endif
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+  ASSERT_NE(frames, nullptr);
+  ASSERT_EQ(count, 1);
+  EXPECT_STREQ(frames[0].func, "KINSetNumMaxIters");
+  EXPECT_EQ(frames[0].code, KIN_ILL_INPUT);
+  ASSERT_NE(frames[0].msg, nullptr);
+  EXPECT_THAT(frames[0].msg, testing::HasSubstr(MSG_BAD_MXITER));
 }

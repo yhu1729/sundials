@@ -9,3 +9,4 @@ List of serial KINSOL examples
   kinRoberts_fp:           3-eqn chemical kinetics, accelerated fixed point
   kinRoboKin_dns:          Robot kinematics problem (DENSE)
   kinRoboKin_slu:          Robot problem with SuperLUMT sparse linear solver
+  kinStackTrace:           SUNContext stack trace example

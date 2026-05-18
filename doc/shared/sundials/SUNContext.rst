@@ -234,7 +234,8 @@ Inspecting stack trace frames
 Applications that want to integrate SUNDIALS diagnostics with their own logging
 or error reporting can inspect the recorded frames directly.
 
-See ``examples/cvode/serial/cvStackTrace.c`` for a complete buildable example.
+See ``examples/cvode/serial/cvStackTrace.c`` and
+``examples/kinsol/serial/kinStackTrace.c`` for complete buildable examples.
 
 .. code-block:: C
 

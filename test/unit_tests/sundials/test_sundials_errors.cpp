@@ -206,6 +206,64 @@ TEST_F(SUNErrConditionTest, StackTraceHonorsMaxDepth)
   EXPECT_STREQ(frames[1].func, "propagateSUNCheckFailure");
 }
 
+TEST_F(SUNErrConditionTest, StackTraceRejectsInvalidArguments)
+{
+  const SUNStackTraceFrame* frames = nullptr;
+  int count                       = 0;
+
+  EXPECT_EQ(SUNContext_SetStackTraceEnabled(nullptr, SUNTRUE),
+            SUN_ERR_SUNCTX_CORRUPT);
+  EXPECT_EQ(SUNContext_SetStackTraceMaxDepth(nullptr, 2),
+            SUN_ERR_SUNCTX_CORRUPT);
+  EXPECT_EQ(SUNContext_SetStackTraceMaxDepth(sunctx, 0),
+            SUN_ERR_ARG_OUTOFRANGE);
+  EXPECT_EQ(SUNContext_GetStackTrace(nullptr, &frames, &count),
+            SUN_ERR_SUNCTX_CORRUPT);
+  EXPECT_EQ(SUNContext_GetStackTrace(sunctx, nullptr, &count),
+            SUN_ERR_ARG_CORRUPT);
+  EXPECT_EQ(SUNContext_GetStackTrace(sunctx, &frames, nullptr),
+            SUN_ERR_ARG_CORRUPT);
+  EXPECT_EQ(SUNContext_ClearStackTrace(nullptr), SUN_ERR_SUNCTX_CORRUPT);
+  EXPECT_EQ(SUNContext_PrintStackTrace(nullptr, stdout), SUN_ERR_SUNCTX_CORRUPT);
+  EXPECT_EQ(SUNContext_PrintStackTrace(sunctx, nullptr), SUN_ERR_ARG_CORRUPT);
+}
+
+TEST_F(SUNErrConditionTest, StackTraceResizePreservesExistingFrames)
+{
+  const SUNStackTraceFrame* frames = nullptr;
+  int count                       = 0;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
+  ASSERT_EQ(propagateSUNCheckFailureAgain(sunctx), SUN_ERR_ARG_CORRUPT);
+  ASSERT_EQ(SUNContext_SetStackTraceMaxDepth(sunctx, 2), SUN_SUCCESS);
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+
+  ASSERT_NE(frames, nullptr);
+  ASSERT_EQ(count, 2);
+  EXPECT_STREQ(frames[0].func, "failWithSUNCheck");
+  EXPECT_STREQ(frames[1].func, "propagateSUNCheckFailure");
+}
+
+TEST_F(SUNErrConditionTest, StackTraceNewErrorReplacesOldTrace)
+{
+  const SUNStackTraceFrame* frames = nullptr;
+  int count                       = 0;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
+  ASSERT_EQ(propagateSUNCheckFailureAgain(sunctx), SUN_ERR_ARG_CORRUPT);
+
+  SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, "replacement",
+                      SUN_ERR_GENERIC, sunctx);
+
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+  ASSERT_NE(frames, nullptr);
+  ASSERT_EQ(count, 1);
+  EXPECT_STREQ(frames[0].func, "TestBody");
+  EXPECT_EQ(frames[0].code, SUN_ERR_GENERIC);
+  ASSERT_NE(frames[0].msg, nullptr);
+  EXPECT_STREQ(frames[0].msg, "replacement");
+}
+
 TEST_F(SUNErrConditionTest, StackTraceOwnsMessageStorage)
 {
   const SUNStackTraceFrame* frames = nullptr;
@@ -244,6 +302,29 @@ TEST_F(SUNErrConditionTest, StackTracePrintsFrames)
   EXPECT_THAT(std::string(output),
               testing::AllOf(testing::HasSubstr("SUNDIALS stack trace"),
                              testing::HasSubstr("failWithSUNCheck")));
+}
+
+TEST_F(SUNErrConditionTest, StackTracePrintsTruncation)
+{
+  FILE* fp = nullptr;
+  char output[1024] = {};
+  size_t nread;
+
+  ASSERT_EQ(SUNContext_SetStackTraceMaxDepth(sunctx, 2), SUN_SUCCESS);
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
+  ASSERT_EQ(propagateSUNCheckFailureAgain(sunctx), SUN_ERR_ARG_CORRUPT);
+
+  fp = tmpfile();
+  ASSERT_NE(fp, nullptr);
+  ASSERT_EQ(SUNContext_PrintStackTrace(sunctx, fp), SUN_SUCCESS);
+  rewind(fp);
+  nread = fread(output, 1, sizeof(output) - 1, fp);
+  fclose(fp);
+  output[nread] = '\0';
+
+  EXPECT_THAT(std::string(output),
+              testing::AllOf(testing::HasSubstr("2 frames"),
+                             testing::HasSubstr("stack trace truncated")));
 }
 
 class SUNErrHandlerFnTest : public testing::Test
