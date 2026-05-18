@@ -17,11 +17,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <nvector/nvector_manyvector.h>
 #include <nvector/nvector_serial.h>
 #include <string>
 #include <sundials/priv/sundials_errors_impl.h>
 #include <sundials/sundials_core.h>
 #include <sundials/sundials_nvector.h>
+#include <type_traits>
 
 #include "../utilities/dumpstderr.hpp"
 #include "sundials/sundials_context.h"
@@ -30,6 +33,14 @@
 #include "sundials/sundials_types.h"
 
 static const std::string errfile{"test_sundials_errors.err"};
+
+using NVectorOwner =
+  std::unique_ptr<std::remove_pointer<N_Vector>::type, decltype(&N_VDestroy)>;
+
+static NVectorOwner makeNVectorOwner(N_Vector v)
+{
+  return NVectorOwner(v, N_VDestroy);
+}
 
 static SUNErrCode failWithSUNCheck(SUNContext sunctx)
 {
@@ -170,6 +181,64 @@ TEST_F(SUNErrConditionTest, StackTraceRecordsLeafAndPropagationFrames)
   EXPECT_EQ(frames[0].code, SUN_ERR_ARG_CORRUPT);
   ASSERT_NE(frames[0].msg, nullptr);
   EXPECT_THAT(frames[0].msg, testing::HasSubstr("expected SUNFALSE"));
+}
+
+TEST_F(SUNErrConditionTest, StackTraceRecordsDeepPublicCallPath)
+{
+  N_Vector subvectors[1]          = {v};
+  const SUNStackTraceFrame* frames = nullptr;
+  sunindextype size               = 0;
+  int count                       = 0;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
+
+  auto manyvec = makeNVectorOwner(N_VNew_ManyVector(1, subvectors, sunctx));
+  ASSERT_NE(manyvec.get(), nullptr);
+
+  v->ops->nvbufsize = nullptr;
+  SUNErrCode err    = N_VBufSize(manyvec.get(), &size);
+  EXPECT_EQ(err, SUN_ERR_NOT_IMPLEMENTED);
+
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+  ASSERT_NE(frames, nullptr);
+  ASSERT_EQ(count, 2);
+  EXPECT_STREQ(frames[0].func, "N_VBufSize");
+  EXPECT_STREQ(frames[1].func, "N_VBufSize_ManyVector");
+  EXPECT_EQ(frames[0].code, SUN_ERR_NOT_IMPLEMENTED);
+  EXPECT_EQ(frames[1].code, SUN_ERR_NOT_IMPLEMENTED);
+}
+
+TEST_F(SUNErrConditionTest, StackTraceRecordsNestedManyVectorPath)
+{
+  N_Vector inner_subvectors[1]     = {v};
+  const SUNStackTraceFrame* frames = nullptr;
+  sunindextype size               = 0;
+  int count                       = 0;
+
+  ASSERT_EQ(SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE), SUN_SUCCESS);
+
+  auto inner =
+    makeNVectorOwner(N_VNew_ManyVector(1, inner_subvectors, sunctx));
+  ASSERT_NE(inner.get(), nullptr);
+
+  N_Vector outer_subvectors[1] = {inner.get()};
+  auto outer =
+    makeNVectorOwner(N_VNew_ManyVector(1, outer_subvectors, sunctx));
+  ASSERT_NE(outer.get(), nullptr);
+
+  v->ops->nvbufsize = nullptr;
+  SUNErrCode err    = N_VBufSize(outer.get(), &size);
+  EXPECT_EQ(err, SUN_ERR_NOT_IMPLEMENTED);
+
+  ASSERT_EQ(SUNContext_GetStackTrace(sunctx, &frames, &count), SUN_SUCCESS);
+  ASSERT_NE(frames, nullptr);
+  ASSERT_EQ(count, 3);
+  EXPECT_STREQ(frames[0].func, "N_VBufSize");
+  EXPECT_STREQ(frames[1].func, "N_VBufSize_ManyVector");
+  EXPECT_STREQ(frames[2].func, "N_VBufSize_ManyVector");
+  EXPECT_EQ(frames[0].code, SUN_ERR_NOT_IMPLEMENTED);
+  EXPECT_EQ(frames[1].code, SUN_ERR_NOT_IMPLEMENTED);
+  EXPECT_EQ(frames[2].code, SUN_ERR_NOT_IMPLEMENTED);
 }
 
 TEST_F(SUNErrConditionTest, StackTraceClearAndDisable)

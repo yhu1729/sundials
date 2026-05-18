@@ -32,7 +32,7 @@ if(TARGET GTest::gtest_main AND TARGET GTest::gmock)
       ${test} ${test}.cpp ${PROJECT_SOURCE_DIR}/src/sundials/sundials_hashmap.c)
     target_link_libraries(
       ${test} PRIVATE sundials_core sundials_nvecserial sundials_sunmemsys_obj
-                      GTest::gtest_main GTest::gmock)
+                      sundials_nvecmanyvector GTest::gtest_main GTest::gmock)
 
     if(test STREQUAL "test_sundials_logger")
       gtest_discover_tests(${test} PROPERTIES LABELS "logging")

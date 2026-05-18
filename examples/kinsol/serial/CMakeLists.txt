@@ -59,7 +59,7 @@ set(KINSOL_extras kinRoboKin_dns_stats.csv)
 
 # Specify libraries to link against
 set(KINSOL_LIB sundials_kinsol)
-set(NVECS_LIB sundials_nvecserial)
+set(NVECS_LIB sundials_nvecserial sundials_nvecmanyvector)
 
 # Set-up linker flags and link libraries
 set(SUNDIALS_LIBS ${KINSOL_LIB} ${NVECS_LIB} ${EXE_EXTRA_LINK_LIBS})

@@ -3,3 +3,7 @@ Recorded 1 stack trace frame(s).
 Leaf frame: KINSol
 Error code: KIN_NO_MALLOC
 Message: Attempt to call before KINMalloc illegal.
+N_VBufSize returned SUN_ERR_NOT_IMPLEMENTED as expected.
+Deep stack trace recorded 2 frame(s).
+Deep leaf frame: N_VBufSize
+Deep propagation frame: N_VBufSize_ManyVector

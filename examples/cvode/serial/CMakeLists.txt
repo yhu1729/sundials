@@ -62,7 +62,7 @@ set(CVODE_extras plot_cvParticle.py plot_cvPendulum.py cvRoberts_dns_stats.csv)
 
 # Specify libraries to link against
 set(CVODE_LIB sundials_cvode)
-set(NVECS_LIB sundials_nvecserial)
+set(NVECS_LIB sundials_nvecserial sundials_nvecmanyvector)
 
 if(SUNDIALS_ENABLE_PACKAGE_FUSED_KERNELS)
   list(APPEND CVODE_LIB sundials_cvode_fused_stubs)
