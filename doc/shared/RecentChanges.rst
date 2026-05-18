@@ -8,6 +8,9 @@
 Added the function :c:func:`SUNLogger_SetQueueAndFlushMsgFns` to allow for
 user-defined functions to queue and flush log messages.
 
+Added opt-in logical stack traces to :c:type:`SUNContext` for inspecting the
+SUNDIALS call path that produced the most recent error.
+
 Updated ``examples/cvode/petsc/cv_petsc_ex7.c`` to support PETSc 3.25.0.
 
 **Bug Fixes**

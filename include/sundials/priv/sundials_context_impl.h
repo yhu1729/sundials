@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+struct SUNStackTraceFrame_;
+
 struct SUNContext_
 {
   void* python;
@@ -41,6 +43,12 @@ struct SUNContext_
   SUNErrCode last_err;
   SUNErrHandler err_handler;
   SUNComm comm;
+  sunbooleantype stack_trace_enabled;
+  struct SUNStackTraceFrame_* stack_trace;
+  int stack_trace_count;
+  int stack_trace_capacity;
+  SUNErrCode stack_trace_err;
+  sunbooleantype stack_trace_truncated;
 };
 
 #ifdef __cplusplus

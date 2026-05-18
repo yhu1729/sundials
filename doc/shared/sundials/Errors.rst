@@ -82,6 +82,13 @@ The function :c:func:`SUNGetErrMsg` can be used to get a message describing the 
   However, users concerned with getting the most performance might choose to exclude or limit these checks.
 
 
+.. note::
+
+  Users who need the SUNDIALS call path that produced an error can enable
+  opt-in logical stack traces on the :c:type:`SUNContext`. See
+  :numref:`SUNDIALS.SUNContext.StackTraces` for examples.
+
+
 .. warning::
 
   If a function returns a :c:type:`SUNErrCode` then the return value is the only place the error is available

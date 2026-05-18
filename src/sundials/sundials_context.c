@@ -33,10 +33,99 @@
 #include "sundials_adiak_metadata.h"
 #include "sundials_macros.h"
 
+#define SUNCTX_DEFAULT_STACK_TRACE_DEPTH 32
+
 /* Forward declaration of function used to destroy any data allocated for Python */
 #if defined(SUNDIALS_ENABLE_PYTHON)
 void SUNContextFunctionTable_Destroy(void* ptr);
 #endif
+
+static char* sunContext_CopyStackTraceMessage(const char* msg, SUNErrCode code)
+{
+  const char* src = (msg != NULL) ? msg : SUNGetErrMsg(code);
+  size_t len;
+  char* copy;
+
+  if (src == NULL) { return NULL; }
+
+  len  = strlen(src);
+  copy = (char*)malloc(len + 1);
+  if (copy == NULL) { return NULL; }
+
+  memcpy(copy, src, len + 1);
+  return copy;
+}
+
+static void sunContext_FreeStackTraceMessages(SUNContext sunctx)
+{
+  int i;
+
+  if (sunctx == NULL || sunctx->stack_trace == NULL) { return; }
+
+  for (i = 0; i < sunctx->stack_trace_count; i++)
+  {
+    free((void*)sunctx->stack_trace[i].msg);
+    sunctx->stack_trace[i].msg = NULL;
+  }
+}
+
+static void sunContext_ResetStackTrace(SUNContext sunctx)
+{
+  if (sunctx == NULL) { return; }
+
+  sunContext_FreeStackTraceMessages(sunctx);
+  sunctx->stack_trace_count     = 0;
+  sunctx->stack_trace_err       = SUN_SUCCESS;
+  sunctx->stack_trace_truncated = SUNFALSE;
+}
+
+static void sunContext_AppendStackTraceFrame(SUNContext sunctx, int line,
+                                             const char* func, const char* file,
+                                             const char* msg, SUNErrCode code)
+{
+  SUNStackTraceFrame* frame;
+
+  if (sunctx == NULL || sunctx->stack_trace == NULL ||
+      sunctx->stack_trace_count >= sunctx->stack_trace_capacity)
+  {
+    if (sunctx != NULL) { sunctx->stack_trace_truncated = SUNTRUE; }
+    return;
+  }
+
+  frame       = &sunctx->stack_trace[sunctx->stack_trace_count];
+  frame->func = func;
+  frame->file = file;
+  frame->msg  = sunContext_CopyStackTraceMessage(msg, code);
+  frame->line = line;
+  frame->code = code;
+
+  sunctx->stack_trace_count++;
+}
+
+void sunContext_TraceRaise(SUNContext sunctx, int line, const char* func,
+                           const char* file, const char* msg, SUNErrCode code)
+{
+  if (sunctx == NULL || !sunctx->stack_trace_enabled || code >= 0) { return; }
+
+  sunContext_ResetStackTrace(sunctx);
+  sunctx->stack_trace_err = code;
+  sunContext_AppendStackTraceFrame(sunctx, line, func, file, msg, code);
+}
+
+void sunContext_TracePropagate(SUNContext sunctx, int line, const char* func,
+                               const char* file, const char* msg,
+                               SUNErrCode code)
+{
+  if (sunctx == NULL || !sunctx->stack_trace_enabled || code >= 0) { return; }
+
+  if (sunctx->stack_trace_count == 0 || sunctx->stack_trace_err != code)
+  {
+    sunContext_ResetStackTrace(sunctx);
+    sunctx->stack_trace_err = code;
+  }
+
+  sunContext_AppendStackTraceFrame(sunctx, line, func, file, msg, code);
+}
 
 SUNErrCode SUNContext_Create(SUNComm comm, SUNContext* sunctx_out)
 {
@@ -52,6 +141,21 @@ SUNErrCode SUNContext_Create(SUNComm comm, SUNContext* sunctx_out)
   /* SUNContext_Create cannot assert or log since the SUNContext is not yet
    * created */
   if (!sunctx) { return SUN_ERR_MALLOC_FAIL; }
+
+  sunctx->python       = NULL;
+  sunctx->logger       = NULL;
+  sunctx->own_logger   = SUNFALSE;
+  sunctx->profiler     = NULL;
+  sunctx->own_profiler = SUNFALSE;
+  sunctx->last_err     = SUN_SUCCESS;
+  sunctx->err_handler  = NULL;
+  sunctx->comm         = comm;
+  sunctx->stack_trace_enabled   = SUNFALSE;
+  sunctx->stack_trace           = NULL;
+  sunctx->stack_trace_count     = 0;
+  sunctx->stack_trace_capacity  = SUNCTX_DEFAULT_STACK_TRACE_DEPTH;
+  sunctx->stack_trace_err       = SUN_SUCCESS;
+  sunctx->stack_trace_truncated = SUNFALSE;
 
   SUNFunctionBegin(sunctx);
 
@@ -107,6 +211,12 @@ SUNErrCode SUNContext_Create(SUNComm comm, SUNContext* sunctx_out)
     sunctx->last_err     = SUN_SUCCESS;
     sunctx->err_handler  = eh;
     sunctx->comm         = comm;
+    sunctx->stack_trace_enabled   = SUNFALSE;
+    sunctx->stack_trace           = NULL;
+    sunctx->stack_trace_count     = 0;
+    sunctx->stack_trace_capacity  = SUNCTX_DEFAULT_STACK_TRACE_DEPTH;
+    sunctx->stack_trace_err       = SUN_SUCCESS;
+    sunctx->stack_trace_truncated = SUNFALSE;
   }
   while (0);
 
@@ -184,6 +294,132 @@ SUNErrCode SUNContext_ClearErrHandlers(SUNContext sunctx)
   {
     SUNCheckCall(SUNContext_PopErrHandler(sunctx));
   }
+  return SUN_SUCCESS;
+}
+
+SUNErrCode SUNContext_SetStackTraceEnabled(SUNContext sunctx,
+                                           sunbooleantype enabled)
+{
+  if (!sunctx) { return SUN_ERR_SUNCTX_CORRUPT; }
+
+  SUNFunctionBegin(sunctx);
+
+  if (enabled)
+  {
+    if (sunctx->stack_trace_enabled) { return SUN_SUCCESS; }
+
+    sunctx->stack_trace = (SUNStackTraceFrame*)calloc(
+      (size_t)sunctx->stack_trace_capacity, sizeof(SUNStackTraceFrame));
+    if (sunctx->stack_trace == NULL) { return SUN_ERR_MALLOC_FAIL; }
+
+    sunctx->stack_trace_count     = 0;
+    sunctx->stack_trace_err       = SUN_SUCCESS;
+    sunctx->stack_trace_truncated = SUNFALSE;
+    sunctx->stack_trace_enabled   = SUNTRUE;
+    return SUN_SUCCESS;
+  }
+
+  sunContext_ResetStackTrace(sunctx);
+  free(sunctx->stack_trace);
+  sunctx->stack_trace         = NULL;
+  sunctx->stack_trace_enabled = SUNFALSE;
+  return SUN_SUCCESS;
+}
+
+SUNErrCode SUNContext_SetStackTraceMaxDepth(SUNContext sunctx, int max_depth)
+{
+  SUNStackTraceFrame* new_stack_trace = NULL;
+  sunbooleantype old_truncated;
+  int new_count;
+  int old_count;
+  int i;
+
+  if (!sunctx) { return SUN_ERR_SUNCTX_CORRUPT; }
+  if (max_depth <= 0) { return SUN_ERR_ARG_OUTOFRANGE; }
+
+  SUNFunctionBegin(sunctx);
+
+  if (!sunctx->stack_trace_enabled)
+  {
+    sunctx->stack_trace_capacity = max_depth;
+    return SUN_SUCCESS;
+  }
+
+  new_stack_trace = (SUNStackTraceFrame*)calloc((size_t)max_depth,
+                                                sizeof(SUNStackTraceFrame));
+  if (new_stack_trace == NULL) { return SUN_ERR_MALLOC_FAIL; }
+
+  old_count = sunctx->stack_trace_count;
+  old_truncated = sunctx->stack_trace_truncated;
+  new_count = (old_count < max_depth) ? old_count : max_depth;
+  for (i = 0; i < new_count; i++)
+  {
+    new_stack_trace[i] = sunctx->stack_trace[i];
+  }
+
+  for (i = new_count; i < old_count; i++)
+  {
+    free((void*)sunctx->stack_trace[i].msg);
+  }
+
+  free(sunctx->stack_trace);
+  sunctx->stack_trace           = new_stack_trace;
+  sunctx->stack_trace_count     = new_count;
+  sunctx->stack_trace_capacity  = max_depth;
+  sunctx->stack_trace_truncated = old_truncated || (new_count < old_count);
+
+  return SUN_SUCCESS;
+}
+
+SUNErrCode SUNContext_GetStackTrace(SUNContext sunctx,
+                                    const SUNStackTraceFrame** frames,
+                                    int* count)
+{
+  if (!sunctx) { return SUN_ERR_SUNCTX_CORRUPT; }
+  if (frames == NULL || count == NULL) { return SUN_ERR_ARG_CORRUPT; }
+
+  SUNFunctionBegin(sunctx);
+
+  *frames = sunctx->stack_trace;
+  *count  = sunctx->stack_trace_count;
+  return SUN_SUCCESS;
+}
+
+SUNErrCode SUNContext_ClearStackTrace(SUNContext sunctx)
+{
+  if (!sunctx) { return SUN_ERR_SUNCTX_CORRUPT; }
+
+  SUNFunctionBegin(sunctx);
+  sunContext_ResetStackTrace(sunctx);
+  return SUN_SUCCESS;
+}
+
+SUNErrCode SUNContext_PrintStackTrace(SUNContext sunctx, FILE* fp)
+{
+  int i;
+
+  if (!sunctx) { return SUN_ERR_SUNCTX_CORRUPT; }
+  if (fp == NULL) { return SUN_ERR_ARG_CORRUPT; }
+
+  SUNFunctionBegin(sunctx);
+
+  fprintf(fp, "SUNDIALS stack trace (%d frame%s):\n",
+          sunctx->stack_trace_count,
+          (sunctx->stack_trace_count == 1) ? "" : "s");
+  for (i = 0; i < sunctx->stack_trace_count; i++)
+  {
+    SUNStackTraceFrame* frame = &sunctx->stack_trace[i];
+    fprintf(fp, "  [%d] %s at %s:%d: %s\n", i,
+            (frame->func != NULL) ? frame->func : "<unknown>",
+            (frame->file != NULL) ? frame->file : "<unknown>", frame->line,
+            (frame->msg != NULL) ? frame->msg : SUNGetErrMsg(frame->code));
+  }
+  if (sunctx->stack_trace_truncated)
+  {
+    fprintf(fp, "  ... stack trace truncated at %d frames\n",
+            sunctx->stack_trace_capacity);
+  }
+
   return SUN_SUCCESS;
 }
 
@@ -300,6 +536,10 @@ SUNErrCode SUNContext_Free(SUNContext* sunctx)
   }
 
   SUNContext_ClearErrHandlers(*sunctx);
+
+  sunContext_ResetStackTrace(*sunctx);
+  free((*sunctx)->stack_trace);
+  (*sunctx)->stack_trace = NULL;
 
 #if defined(SUNDIALS_ENABLE_PYTHON)
   SUNContextFunctionTable_Destroy((*sunctx)->python);

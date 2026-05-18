@@ -45,8 +45,8 @@ extern "C" {
     int sun_chk_mpi_call_err_code_ = call;                                     \
     if (sun_chk_mpi_call_err_code_ != MPI_SUCCESS)                             \
     {                                                                          \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, SUN_ERR_MPI_FAIL, \
-                          SUNCTX_);                                            \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg,                \
+                             SUN_ERR_MPI_FAIL, SUNCTX_);                       \
       return SUN_ERR_MPI_FAIL;                                                 \
     }                                                                          \
   }                                                                            \
@@ -69,8 +69,8 @@ extern "C" {
     int sun_chk_mpi_call_err_code_ = call;                                     \
     if (sun_chk_mpi_call_err_code_ != MPI_SUCCESS)                             \
     {                                                                          \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, SUN_ERR_MPI_FAIL, \
-                          SUNCTX_);                                            \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg,                \
+                             SUN_ERR_MPI_FAIL, SUNCTX_);                       \
       return NULL;                                                             \
     }                                                                          \
   }                                                                            \
@@ -93,8 +93,8 @@ extern "C" {
     int sun_chk_mpi_call_err_code_ = call;                                     \
     if (sun_chk_mpi_call_err_code_ != MPI_SUCCESS)                             \
     {                                                                          \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, SUN_ERR_MPI_FAIL, \
-                          SUNCTX_);                                            \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg,                \
+                             SUN_ERR_MPI_FAIL, SUNCTX_);                       \
       return;                                                                  \
     }                                                                          \
   }                                                                            \
@@ -117,8 +117,8 @@ extern "C" {
     int sun_chk_mpi_call_err_code_ = call;                                     \
     if (sun_chk_mpi_call_err_code_ != MPI_SUCCESS)                             \
     {                                                                          \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, SUN_ERR_MPI_FAIL, \
-                          SUNCTX_);                                            \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg,                \
+                             SUN_ERR_MPI_FAIL, SUNCTX_);                       \
     }                                                                          \
   }                                                                            \
   while (0)

@@ -135,6 +135,16 @@ SUNDIALS_EXPORT
 void SUNGlobalFallbackErrHandler(int line, const char* func, const char* file,
                                  const char* msgfmt, SUNErrCode code, ...);
 
+SUNDIALS_EXPORT
+void sunContext_TraceRaise(SUNContext sunctx, int line, const char* func,
+                           const char* file, const char* msg,
+                           SUNErrCode code);
+
+SUNDIALS_EXPORT
+void sunContext_TracePropagate(SUNContext sunctx, int line, const char* func,
+                               const char* file, const char* msg,
+                               SUNErrCode code);
+
 /*
   This function calls the error handlers registered with the SUNContext
   with the provided message.
@@ -152,8 +162,13 @@ static inline void SUNHandleErrWithMsg(int line, const char* func,
                                        const char* file, const char* msg,
                                        SUNErrCode code, SUNContext sunctx)
 {
-  if (!sunctx) { SUNGlobalFallbackErrHandler(line, func, file, msg, code); }
+  if (!sunctx)
+  {
+    SUNGlobalFallbackErrHandler(line, func, file, msg, code);
+    return;
+  }
 
+  sunContext_TraceRaise(sunctx, line, func, file, msg, code);
   sunctx->last_err = code;
   SUNErrHandler eh = sunctx->err_handler;
   while (eh != NULL)
@@ -195,6 +210,26 @@ static inline void SUNHandleErrWithFmtMsg(int line, const char* func,
   va_end(values);
   SUNHandleErrWithMsg(line, func, file, msg, code, sunctx);
   free(msg);
+}
+
+static inline void SUNPropagateErrWithMsg(int line, const char* func,
+                                          const char* file, const char* msg,
+                                          SUNErrCode code, SUNContext sunctx)
+{
+  if (!sunctx)
+  {
+    SUNGlobalFallbackErrHandler(line, func, file, msg, code);
+    return;
+  }
+
+  sunContext_TracePropagate(sunctx, line, func, file, msg, code);
+  sunctx->last_err = code;
+  SUNErrHandler eh = sunctx->err_handler;
+  while (eh != NULL)
+  {
+    eh->call(line, func, file, msg, code, eh->data, sunctx);
+    eh = eh->previous;
+  }
 }
 
 /*
@@ -344,8 +379,8 @@ static inline void SUNHandleErrWithFmtMsg(int line, const char* func,
     SUNErrCode sun_chk_call_err_code_ = call;                \
     if (SUNHintFalse(sun_chk_call_err_code_ < 0))            \
     {                                                        \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, \
-                          sun_chk_call_err_code_, SUNCTX_);  \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg, \
+                             sun_chk_call_err_code_, SUNCTX_);  \
       return sun_chk_call_err_code_;                         \
     }                                                        \
   }                                                          \
@@ -368,8 +403,8 @@ static inline void SUNHandleErrWithFmtMsg(int line, const char* func,
     SUNErrCode sun_chk_call_err_code_ = call;                \
     if (SUNHintFalse(sun_chk_call_err_code_ < 0))            \
     {                                                        \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, \
-                          sun_chk_call_err_code_, SUNCTX_);  \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg, \
+                             sun_chk_call_err_code_, SUNCTX_);  \
     }                                                        \
   }                                                          \
   while (0)
@@ -391,8 +426,8 @@ static inline void SUNHandleErrWithFmtMsg(int line, const char* func,
     SUNErrCode sun_chk_call_err_code_ = call;                \
     if (SUNHintFalse(sun_chk_call_err_code_ < 0))            \
     {                                                        \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, \
-                          sun_chk_call_err_code_, SUNCTX_);  \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg, \
+                             sun_chk_call_err_code_, SUNCTX_);  \
       return NULL;                                           \
     }                                                        \
   }                                                          \
@@ -415,8 +450,8 @@ static inline void SUNHandleErrWithFmtMsg(int line, const char* func,
     SUNErrCode sun_chk_call_err_code_ = call;                \
     if (SUNHintFalse(sun_chk_call_err_code_ < 0))            \
     {                                                        \
-      SUNHandleErrWithMsg(__LINE__, __func__, __FILE__, msg, \
-                          sun_chk_call_err_code_, SUNCTX_);  \
+      SUNPropagateErrWithMsg(__LINE__, __func__, __FILE__, msg, \
+                             sun_chk_call_err_code_, SUNCTX_);  \
       return;                                                \
     }                                                        \
   }                                                          \

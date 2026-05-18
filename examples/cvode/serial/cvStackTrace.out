@@ -1,0 +1,5 @@
+CVodeSStolerances returned CV_NO_MALLOC as expected.
+Recorded 1 stack trace frame(s).
+Leaf frame: CVodeSStolerances
+Error code: CV_NO_MALLOC
+Message: Attempt to call before CVodeInit.

@@ -99,6 +99,172 @@ The :c:type:`SUNContext` API further consists of the following functions:
    :return: the last :c:type:`SUNErrCode` recorded.
 
 
+.. _SUNDIALS.SUNContext.StackTraces:
+
+Stack traces
+------------
+
+The :c:type:`SUNContext` can optionally record a logical SUNDIALS stack trace
+for the most recent error. This trace is disabled by default. When enabled,
+``frames[0]`` is the original error site and later frames are propagation sites.
+The stored frame array is owned by the :c:type:`SUNContext` and remains valid
+until the next recorded error, :c:func:`SUNContext_ClearStackTrace`, disabling
+stack traces, or :c:func:`SUNContext_Free`.
+
+Stack traces record SUNDIALS errors only. Warnings are not traced, and errors
+reported without a valid :c:type:`SUNContext` use the global fallback error
+handler and cannot be stored in a context trace.
+
+.. c:type:: SUNStackTraceFrame
+
+   A stack trace frame recorded by a :c:type:`SUNContext`.
+
+   The fields are:
+
+   * ``const char* func`` -- the function name for the frame.
+   * ``const char* file`` -- the source file for the frame.
+   * ``const char* msg`` -- the error message for the frame. This string is
+     owned by the :c:type:`SUNContext`.
+   * ``int line`` -- the source line for the frame.
+   * ``SUNErrCode code`` -- the error code for the frame.
+
+
+.. c:function:: SUNErrCode SUNContext_SetStackTraceEnabled(SUNContext sunctx, sunbooleantype enabled)
+
+   Enables or disables stack trace recording for a :c:type:`SUNContext`.
+
+   :param sunctx: a valid :c:type:`SUNContext` object.
+   :param enabled: ``SUNTRUE`` to enable stack traces or ``SUNFALSE`` to disable them.
+
+   :return: :c:type:`SUNErrCode` indicating success or failure.
+
+
+.. c:function:: SUNErrCode SUNContext_SetStackTraceMaxDepth(SUNContext sunctx, int max_depth)
+
+   Sets the maximum number of stack trace frames stored in the context. The
+   default depth is 32.
+
+   :param sunctx: a valid :c:type:`SUNContext` object.
+   :param max_depth: maximum number of frames to store. This value must be positive.
+
+   :return: :c:type:`SUNErrCode` indicating success or failure.
+
+
+.. c:function:: SUNErrCode SUNContext_GetStackTrace(SUNContext sunctx, const SUNStackTraceFrame** frames, int* count)
+
+   Gets the stack trace for the most recent error recorded in the context.
+
+   :param sunctx: a valid :c:type:`SUNContext` object.
+   :param frames: [in,out] set to the first frame in the trace, or ``NULL`` if
+      stack traces are disabled.
+   :param count: [in,out] set to the number of frames in the trace.
+
+   :return: :c:type:`SUNErrCode` indicating success or failure.
+
+
+.. c:function:: SUNErrCode SUNContext_ClearStackTrace(SUNContext sunctx)
+
+   Clears the stack trace currently stored in the context.
+
+   :param sunctx: a valid :c:type:`SUNContext` object.
+
+   :return: :c:type:`SUNErrCode` indicating success or failure.
+
+
+.. c:function:: SUNErrCode SUNContext_PrintStackTrace(SUNContext sunctx, FILE* fp)
+
+   Prints the stack trace currently stored in the context.
+
+   :param sunctx: a valid :c:type:`SUNContext` object.
+   :param fp: output stream for the stack trace.
+
+   :return: :c:type:`SUNErrCode` indicating success or failure.
+
+
+Printing a stack trace after an error
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The most common use is to enable tracing immediately after creating the
+context, then print the trace when a SUNDIALS call returns an error.
+
+.. code-block:: C
+
+   SUNContext sunctx = NULL;
+   void* cvode_mem = NULL;
+   int retval;
+
+   retval = SUNContext_Create(SUN_COMM_NULL, &sunctx);
+   if (retval) { return 1; }
+
+   retval = SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE);
+   if (retval) { return 1; }
+
+   /*
+    * Optional: keep more frames when debugging deep call paths. If this is not
+    * called, the default maximum depth is 32 frames.
+    */
+   retval = SUNContext_SetStackTraceMaxDepth(sunctx, 64);
+   if (retval) { return 1; }
+
+   cvode_mem = CVodeCreate(CV_BDF, sunctx);
+   if (cvode_mem == NULL)
+   {
+      SUNContext_PrintStackTrace(sunctx, stderr);
+      SUNContext_Free(&sunctx);
+      return 1;
+   }
+
+   /*
+    * This call is invalid before CVodeInit and will produce a trace ending at
+    * CVodeSStolerances.
+    */
+   retval = CVodeSStolerances(cvode_mem, 1.0e-4, 1.0e-8);
+   if (retval < 0)
+   {
+      SUNContext_PrintStackTrace(sunctx, stderr);
+   }
+
+   CVodeFree(&cvode_mem);
+   SUNContext_Free(&sunctx);
+
+
+Inspecting stack trace frames
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Applications that want to integrate SUNDIALS diagnostics with their own logging
+or error reporting can inspect the recorded frames directly.
+
+See ``examples/cvode/serial/cvStackTrace.c`` for a complete buildable example.
+
+.. code-block:: C
+
+   const SUNStackTraceFrame* frames = NULL;
+   int nframes = 0;
+   int retval;
+
+   retval = SUNContext_SetStackTraceEnabled(sunctx, SUNTRUE);
+   if (retval) { return retval; }
+
+   retval = SomeSUNDIALSFunction(...);
+   if (retval < 0)
+   {
+      SUNContext_GetStackTrace(sunctx, &frames, &nframes);
+
+      for (int i = 0; i < nframes; i++)
+      {
+         fprintf(stderr, "#%d %s at %s:%d: %s\n",
+                 i,
+                 frames[i].func,
+                 frames[i].file,
+                 frames[i].line,
+                 frames[i].msg);
+      }
+
+      SUNContext_ClearStackTrace(sunctx);
+      return retval;
+   }
+
+
 .. c:function:: SUNErrCode SUNContext_PushErrHandler(SUNContext sunctx, SUNErrHandlerFn err_fn, void* err_user_data)
 
    Pushes a new :c:type:`SUNErrHandlerFn` onto the error handler stack so that it is called when an

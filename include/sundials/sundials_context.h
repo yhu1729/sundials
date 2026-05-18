@@ -22,6 +22,8 @@
 #ifndef _SUNDIALS_CONTEXT_H
 #define _SUNDIALS_CONTEXT_H
 
+#include <stdio.h>
+
 #include <sundials/priv/sundials_context_impl.h>
 
 #ifdef __cplusplus /* wrapper to enable C++ usage */
@@ -46,6 +48,33 @@ SUNErrCode SUNContext_PopErrHandler(SUNContext sunctx);
 
 SUNDIALS_EXPORT
 SUNErrCode SUNContext_ClearErrHandlers(SUNContext sunctx);
+
+typedef struct SUNStackTraceFrame_
+{
+  const char* func;
+  const char* file;
+  const char* msg;
+  int line;
+  SUNErrCode code;
+} SUNStackTraceFrame;
+
+SUNDIALS_EXPORT
+SUNErrCode SUNContext_SetStackTraceEnabled(SUNContext sunctx,
+                                           sunbooleantype enabled);
+
+SUNDIALS_EXPORT
+SUNErrCode SUNContext_SetStackTraceMaxDepth(SUNContext sunctx, int max_depth);
+
+SUNDIALS_EXPORT
+SUNErrCode SUNContext_GetStackTrace(SUNContext sunctx,
+                                    const SUNStackTraceFrame** frames,
+                                    int* count);
+
+SUNDIALS_EXPORT
+SUNErrCode SUNContext_ClearStackTrace(SUNContext sunctx);
+
+SUNDIALS_EXPORT
+SUNErrCode SUNContext_PrintStackTrace(SUNContext sunctx, FILE* fp);
 
 SUNDIALS_EXPORT
 SUNErrCode SUNContext_GetProfiler(SUNContext sunctx,
