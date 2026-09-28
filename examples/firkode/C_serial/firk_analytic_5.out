@@ -1,0 +1,32 @@
+
+Analytical ODE test problem:
+    lambda = -100
+    stages = 5 (Radau IIA of order 9)
+    reltol = 1.0e-06
+    abstol = 1.0e-10
+
+        t           u          error
+   ---------------------------------------
+    1.000000    0.785398   7.271e-08
+    2.000000    1.107149   1.462e-08
+    3.000000    1.249046   2.442e-08
+    4.000000    1.325816   2.022e-06
+    5.000000    1.373405   4.254e-06
+    6.000000    1.405636   1.212e-05
+    7.000000    1.428904   4.672e-06
+    8.000000    1.446438   2.878e-06
+    9.000000    1.460133   6.023e-06
+   10.000000    1.471134   6.404e-06
+   ---------------------------------------
+  Max error = 1.212e-05
+
+Final Solver Statistics:
+   Internal solver steps = 18 (attempted = 20)
+   Total RHS evals = 137
+   Total linear solver setups = 17
+   Total number of Jacobian evaluations = 1
+   Total number of Newton iterations = 23
+   Total number of stage linear iterations = 51
+   Total number of nonlinear solver convergence failures = 0
+   Total number of error test failures = 2
+

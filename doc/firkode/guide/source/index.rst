@@ -1,0 +1,79 @@
+.. ----------------------------------------------------------------
+   SUNDIALS Copyright Start
+   Copyright (c) 2025-2026, Lawrence Livermore National Security,
+   University of Maryland Baltimore County, and the SUNDIALS contributors.
+   Copyright (c) 2013-2025, Lawrence Livermore National Security
+   and Southern Methodist University.
+   Copyright (c) 2002-2013, Lawrence Livermore National Security.
+   All rights reserved.
+
+   See the top-level LICENSE and NOTICE files for details.
+
+   SPDX-License-Identifier: BSD-3-Clause
+   SUNDIALS Copyright End
+   ----------------------------------------------------------------
+
+.. _FIRKODE:
+
+*********************
+FIRKODE Documentation
+*********************
+
+.. include:: Landing.rst
+
+When using the FIRKODE package from SUNDIALS, please cite:
+
+.. code-block:: latex
+
+   @article{hindmarsh2005sundials,
+     title     = {{SUNDIALS}: Suite of nonlinear and differential/algebraic equation solvers},
+     author    = {Hindmarsh, Alan C and Brown, Peter N and Grant, Keith E and Lee, Steven L and Serban, Radu and Shumaker, Dan E and Woodward, Carol S},
+     journal   = {ACM Transactions on Mathematical Software (TOMS)},
+     publisher = {ACM},
+     volume    = {31},
+     number    = {3},
+     pages     = {363--396},
+     year      = {2005},
+     doi       = {10.1145/1089014.1089020}
+   }
+
+The FIRKODE documentation can be cited as:
+
+.. code-block:: latex
+
+   @Misc{firkodeDocumentation,
+     author = {Yifan Hu},
+     title  = {User Documentation for FIRKODE},
+     year   = {|YEAR|},
+     note   = {|FIRKODE_VERSION|}
+   }
+
+
+.. only:: html
+
+   **Table of Contents**
+
+.. toctree::
+   :numbered:
+   :maxdepth: 1
+
+   Introduction
+   Mathematics
+   Organization
+   sundials/index.rst
+   Usage/index.rst
+   nvectors/index.rst
+   sunmatrix/index.rst
+   sunlinsol/index.rst
+   sunnonlinsol/index.rst
+   sunadaptcontroller/index.rst
+   sunmemory/index.rst
+   sundials/Install_link.rst
+   Constants
+   Publications_link.rst
+   History_link.rst
+   Changelog_link.rst
+   References
+.. only:: html
+
+   * :ref:`genindex`

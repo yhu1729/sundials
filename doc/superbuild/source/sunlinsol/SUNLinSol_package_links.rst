@@ -17,6 +17,7 @@
 .. include:: ../../../arkode/guide/source/sunlinsol/ARKODE_interface.rst
 .. include:: ../../../cvode/guide/source/sunlinsol/CVODE_interface.rst
 .. include:: ../../../cvodes/guide/source/sunlinsol/CVODES_interface.rst
+.. include:: ../../../firkode/guide/source/sunlinsol/FIRKODE_interface.rst
 .. include:: ../../../ida/guide/source/sunlinsol/IDA_interface.rst
 .. include:: ../../../idas/guide/source/sunlinsol/IDAS_interface.rst
 .. include:: ../../../kinsol/guide/source/sunlinsol/KINSOL_interface.rst

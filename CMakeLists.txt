@@ -104,6 +104,9 @@ set(kinsollib_SOVERSION "7")
 set(cpodeslib_VERSION "0.0.0")
 set(cpodeslib_SOVERSION "0")
 
+set(firkodelib_VERSION "0.1.0")
+set(firkodelib_SOVERSION "0")
+
 set(nveclib_VERSION "7.9.0")
 set(nveclib_SOVERSION "7")
 

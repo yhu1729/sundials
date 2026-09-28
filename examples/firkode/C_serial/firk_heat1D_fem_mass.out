@@ -1,0 +1,31 @@
+
+1D Heat PDE test problem (P1 finite elements with mass matrix):
+  N = 101
+  diffusion coefficient:  k = 1
+        t        max error
+   -------------------------
+    0.000000   0.000e+00
+    0.100000   4.848e-05
+    0.200000   6.235e-05
+    0.300000   6.307e-05
+    0.400000   5.983e-05
+    0.500000   5.486e-05
+    0.600000   5.017e-05
+    0.700000   4.534e-05
+    0.800000   4.121e-05
+    0.900000   3.719e-05
+    1.000000   3.372e-05
+   -------------------------
+
+Final Solver Statistics:
+   Internal solver steps = 14 (attempted = 15)
+   Total RHS evals = 68
+   Total linear solver setups = 5
+   Total number of Jacobian evaluations = 1
+   Total number of Newton iterations = 17
+   Total number of nonlinear solver convergence failures = 0
+   Total number of error test failures = 1
+   Total number of failed steps from solver failure = 0
+   Total mass matrix setups = 1
+   Total mass matrix solves = 3
+   Total mass times evals = 177

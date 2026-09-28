@@ -1,0 +1,11 @@
+Kvaerno-Prothero-Robinson, Radau IIA with s = 1 stages
+  h = 2.0000e-02  steps =     25  nni/step = 12.00  error = 4.0055e-02
+  h = 1.0000e-02  steps =     50  nni/step =  8.74  error = 1.9014e-02
+  h = 5.0000e-03  steps =    100  nni/step =  7.13  error = 9.3977e-03
+  h = 2.5000e-03  steps =    200  nni/step =  6.05  error = 4.6858e-03
+  observed order =  1.07
+  observed order =  1.02
+  observed order =  1.00
+  observed order 1.00 >= expected 1.00 - 0.3
+
+All tests passed

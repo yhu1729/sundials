@@ -1,0 +1,11 @@
+Prothero-Robinson, Radau IIA with s = 2 stages, lambda = -1
+  h = 2.0000e-01  steps =      5  nni/step =  1.60  error = 2.9715e-05
+  h = 1.0000e-01  steps =     11  nni/step =  1.64  error = 3.5722e-06
+  h = 5.0000e-02  steps =     20  nni/step =  1.50  error = 4.3788e-07
+  h = 2.5000e-02  steps =     40  nni/step =  1.35  error = 5.4198e-08
+  observed order =  3.06
+  observed order =  3.03
+  observed order =  3.01
+  observed order 3.01 >= expected 3.00 - 0.3
+
+All tests passed

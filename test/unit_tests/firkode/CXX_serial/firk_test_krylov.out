@@ -1,0 +1,6 @@
+Matrix-free test, KPR with Radau IIA s = 3, h = 1.000e-02
+  dense:        y = (1.199496259187e+00, 1.077463877610e+00), nni = 210
+  SPGMR:        y = (1.199496259187e+00, 1.077463877613e+00), nni = 160, nli = 0
+  max difference = 2.944e-12
+
+All tests passed

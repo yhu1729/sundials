@@ -120,7 +120,7 @@ rm -f tmp.txt
 # ------------------------------------------------------------------------------
 
 # Replace section titles
-for pkg in arkode cvode cvodes ida idas kinsol
+for pkg in arkode cvode cvodes firkode ida idas kinsol
 do
     sedi 's/Changes to SUNDIALS.*/Changes to SUNDIALS in release X.Y.Z/I' \
          "../doc/${pkg}/guide/source/Introduction.rst"

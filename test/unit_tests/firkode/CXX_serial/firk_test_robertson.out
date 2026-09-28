@@ -1,0 +1,7 @@
+Robertson, Radau IIA with s = 3 stages, rtol = 1.0e-06
+  steps = 298, error test fails = 4, Newton iters = 867, solve fails = 3
+  y[0] = 2.0591766851e-08  error = 2.416e-10  tol = 1.000e-07
+  y[1] = 8.2367069103e-14  error = 8.964e-16  tol = 1.000e-13
+  y[2] = 9.9999997941e-01  error = 2.416e-10  tol = 5.010e-05
+
+All tests passed

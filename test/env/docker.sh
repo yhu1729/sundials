@@ -134,6 +134,7 @@ export SUNDIALS_CVODES=ON
 export SUNDIALS_IDA=ON
 export SUNDIALS_IDAS=ON
 export SUNDIALS_KINSOL=ON
+export SUNDIALS_FIRKODE=ON
 
 # Fortran interface status
 if [ "$compilername" == "gcc" ]; then

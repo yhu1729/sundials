@@ -70,7 +70,7 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        package: [arkode, cvode, cvodes, ida, idas, kinsol]
+        package: [arkode, cvode, cvodes, firkode, ida, idas, kinsol]
         # TODO(DJG): when all user guides and example docs use sphinx remove
         # the example documentation jobs below and use the alternative lines
         # commented out in this job

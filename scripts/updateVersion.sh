@@ -116,6 +116,19 @@ else
     kin_ver="${kin_major}.${kin_minor}.${kin_patch}-${kin_label}"
 fi
 
+# Set the FIRKODE values. FIRKODE is versioned independently of SUNDIALS, so
+# these values must be updated manually for each release.
+firk_major=0
+firk_minor=1
+firk_patch=0
+firk_label=$sun_label
+
+if [ "${firk_label}" == "" ]; then
+    firk_ver="${firk_major}.${firk_minor}.${firk_patch}"
+else
+    firk_ver="${firk_major}.${firk_minor}.${firk_patch}-${firk_label}"
+fi
+
 # Set the NVector values. Assume all values are two less than the SUNDIALS values.
 vec_major=$sun_major
 vec_minor=$sun_minor
@@ -230,6 +243,9 @@ sedi "/idaslib_SOVERSION.*/ s/SOVERSION.*/SOVERSION \"${idas_major}\")/" $fn
 sedi "/kinsollib_VERSION.*/   s/VERSION.*/VERSION \"${kin_ver}\")/" $fn
 sedi "/kinsollib_SOVERSION.*/ s/SOVERSION.*/SOVERSION \"${kin_major}\")/" $fn
 
+sedi "/firkodelib_VERSION.*/   s/VERSION.*/VERSION \"${firk_ver}\")/" $fn
+sedi "/firkodelib_SOVERSION.*/ s/SOVERSION.*/SOVERSION \"${firk_major}\")/" $fn
+
 sedi "/nveclib_VERSION.*/   s/VERSION.*/VERSION \"${vec_ver}\")/" $fn
 sedi "/nveclib_SOVERSION.*/ s/SOVERSION.*/SOVERSION \"${vec_major}\")/" $fn
 
@@ -293,6 +309,10 @@ sedi "s/UCRL-SM-208116,.*/UCRL-SM-208116, ${date}./" $fn
 sedi "s/\"Example Programs for KINSOL v.*/\"Example Programs for KINSOL v${kin_ver},\"/" $fn
 sedi "s/UCRL-SM-208114,.*/UCRL-SM-208114, ${date}./" $fn
 
+fn="../src/firkode/README.md"
+sedi "s/### Version.*/### Version ${firk_ver} (${date})/" $fn
+sedi "s/\"User Documentation for FIRKODE v.*/\"User Documentation for FIRKODE v${firk_ver},\" Technical Report,/" $fn
+
 # ------------------------------------------------------------------------------
 # Update tarscript
 # ------------------------------------------------------------------------------
@@ -305,6 +325,7 @@ sedi "s/IDA_VER=.*/IDA_VER=\"${ida_ver}\"/"    $fn
 sedi "s/IDAS_VER=.*/IDAS_VER=\"${idas_ver}\"/" $fn
 sedi "s/KIN_VER=.*/KIN_VER=\"${kin_ver}\"/"    $fn
 sedi "s/ARK_VER=.*/ARK_VER=\"${ark_ver}\"/"    $fn
+sedi "s/FIRK_VER=.*/FIRK_VER=\"${firk_ver}\"/" $fn
 
 # ------------------------------------------------------------------------------
 # Update tex documentation
@@ -335,6 +356,7 @@ do
     sedi "/Example Programs for IDAS v/ s/v.*/v${idas_ver}}},/"   $fn
     sedi "/User Documentation for KINSOL v/ s/v.*/v${kin_ver}}},/" $fn
     sedi "/Example Programs for KINSOL v/ s/v.*/v${kin_ver}}},/"   $fn
+    sedi "/User Documentation for FIRKODE v/ s/v.*/v${firk_ver}}},/" $fn
     # update dates for user guides and example doc by checking lines between the
     # first and second latex comment patterns
     sedi "/% CURRENT.*/,/% ORIGINAL.*/ s/year.*/year        = ${year}/" $fn
@@ -362,6 +384,7 @@ sedi "s/cvodes_version =.*/cvodes_version = \"v${cvs_ver}\"/" $fn
 sedi "s/ida_version =.*/ida_version = \"v${ida_ver}\"/" $fn
 sedi "s/idas_version =.*/idas_version = \"v${idas_ver}\"/" $fn
 sedi "s/kinsol_version =.*/kinsol_version = \"v${kin_ver}\"/" $fn
+sedi "s/firkode_version =.*/firkode_version = \"v${firk_ver}\"/" $fn
 sedi "s/sundials_version =.*/sundials_version = \"v${sun_ver}\"/" $fn
 sedi "s/doc_version =.*/doc_version = \"v${sun_ver}\"/" $fn
 sedi "s/year =.*/year = \"${year}\"/" $fn
@@ -412,6 +435,11 @@ sedi '/@Misc{kinsolDocumentation,/,/^}/{
   s/\(note[[:space:]]*=[[:space:]]*{\)[^}]*}/\1'"v${kin_ver}"'}/
 }' "$fn"
 
+sedi '/@Misc{firkodeDocumentation,/,/^}/{
+  s/\(year[[:space:]]*=[[:space:]]*{\)[0-9]*}/\1'"${year}"'}/
+  s/\(note[[:space:]]*=[[:space:]]*{\)[^}]*}/\1'"v${firk_ver}"'}/
+}' "$fn"
+
 # Update all occurrences of x.y.z and X.Y.Z to the current version number
 fn="../CHANGELOG.md"
 sedi "s/x.y.z/${sun_ver}/gI" $fn
@@ -459,4 +487,11 @@ done
 for fn in $(grep -Iirl "x.y.z" ../doc/kinsol/guide/source/*)
 do
     sedi "s/x.y.z/${kin_ver}/gI" $fn
+done
+
+fn="../doc/firkode/guide/source/Introduction.rst"
+sedi "s/x.y.z/${sun_ver}/gI" $fn
+for fn in $(grep -Iirl "x.y.z" ../doc/firkode/guide/source/*)
+do
+    sedi "s/x.y.z/${sun_ver} (${firk_ver})/gI" $fn
 done

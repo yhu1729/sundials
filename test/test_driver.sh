@@ -64,6 +64,7 @@ help ()
             ida      -- create tarball containing IDA only
             idas     -- create tarball containing IDAS only
             kinsol   -- create tarball containing KINSOL only
+            firkode  -- create tarball containing FIRKODE only
             all      -- create all possible tarballs
 
         --sunrealtype TYPE
@@ -213,7 +214,7 @@ while [[ $# -gt 0 ]]; do
         --tarball)
             tarball=$2
             case "$tarball" in
-                sundials|arkode|cvode|cvodes|ida|idas|kinsol|all)
+                sundials|arkode|cvode|cvodes|firkode|ida|idas|kinsol|all)
                 ;;
                 *)
                     echo "ERROR: Invalid tarball option $tarball"

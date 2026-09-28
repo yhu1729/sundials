@@ -1,0 +1,6 @@
+Robertson rootfinding, Radau IIA with s = 3 stages
+  root 1 at t = 2.640191e-01: rootsfound = 0 1, g = 9.899e-01 0.000e+00
+  root 2 at t = 2.079514e+07: rootsfound = -1 0, g = -1.355e-20 9.899e-01
+  root function evaluations = 289
+
+All tests passed
