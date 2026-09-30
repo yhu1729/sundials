@@ -392,9 +392,9 @@ typedef struct FIRKodeMemRec
     (I_s (x) M - h A (x) J) x = b
   in place on the stacked (ManyVector) right-hand side b.
 
-  lsolve_blk solves the single block system (M - gamma J) x = b in
-  place on an N-vector b, with the weight vector used to set
-  tolerances for iterative solvers.
+  lsolve_blk solves the block system (M - gamma J) x = b of the
+  filtered error estimate in place on an N-vector b, with the weight
+  vector used to set tolerances for iterative solvers.
   ===============================================================*/
 
 /*===============================================================

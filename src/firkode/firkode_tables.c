@@ -717,9 +717,9 @@ void FIRKodeTable_Write(FIRKodeTable T, FILE* outfile)
   Routine to determine the order of a table from the simplifying
   assumptions B(q), C(eta), and D(zeta): the method has order at
   least min(qB, 2 eta + 2, eta + zeta + 1). Returns 0 if the
-  computed order matches T->q, 1 if it differs, and -1 if the
-  table is invalid. The error estimate order p is reported as
-  stored in the table.
+  computed order matches T->q, 1 if it is higher (a warning), and
+  -1 if it is lower or the table is invalid. The error estimate
+  order p is reported as stored in the table.
   ---------------------------------------------------------------*/
 int FIRKodeTable_CheckOrder(FIRKodeTable T, int* q, int* p, FILE* outfile)
 {
@@ -802,5 +802,7 @@ int FIRKodeTable_CheckOrder(FIRKodeTable T, int* q, int* p, FILE* outfile)
     fprintf(outfile, " -> q = %i (table q = %i), p = %i\n", qcomp, T->q, T->p);
   }
 
-  return (qcomp == T->q) ? 0 : 1;
+  /* an order below the stored one is a failure, above it a warning */
+  if (qcomp < T->q) { return -1; }
+  return (qcomp > T->q) ? 1 : 0;
 }

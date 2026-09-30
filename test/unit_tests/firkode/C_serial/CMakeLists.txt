@@ -25,7 +25,9 @@ set(FIRKODE_unit_tests
     "firk_test_dense_output\;1"
     "firk_test_dense_output\;2"
     "firk_test_dense_output\;3"
+    "firk_test_errest\;"
     "firk_test_getuserdata\;"
+    "firk_test_setorder\;"
     "firk_test_tables\;"
     "firk_test_tstop\;")
 

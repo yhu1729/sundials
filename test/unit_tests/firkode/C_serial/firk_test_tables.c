@@ -259,7 +259,7 @@ static int test_table(int s)
   fails += check(err <= tol, "error estimate weights e", s, err, tol);
   cpow = ((s % 2) == 1) ? -ONE : ONE;
   err  = SUNRabs(T->e[s - 1] - cpow * T->gamma0 / (sunrealtype)s);
-  fails += check(err <= tol, "e_s = (-1)^(s+1) gamma0/s", s, err, tol);
+  fails += check(err <= tol, "e_s = (-1)^s gamma0/s", s, err, tol);
 
   /* dense output coefficients: L_i(c_j) = delta_ij, L_i(1) = delta_is; the
      monomial coefficients grow with s so the tolerance is scaled by |P| */
@@ -417,6 +417,31 @@ int main(void)
            FIRK_MAX_STAGES + 1);
     FIRKodeTable_Free(T);
     fails++;
+  }
+
+  /* the return value of FIRKodeTable_CheckOrder distinguishes a stored order
+     that is too high (failure) from one that is too low (warning) */
+  T = FIRKodeTable_RadauIIA(2);
+  if (T != NULL)
+  {
+    int q, p, retval;
+    T->q   = 5;
+    retval = FIRKodeTable_CheckOrder(T, &q, &p, NULL);
+    if (retval != -1 || q != 3)
+    {
+      printf("  FAIL: CheckOrder with stored order 5 returned %d, q = %d\n",
+             retval, q);
+      fails++;
+    }
+    T->q   = 1;
+    retval = FIRKodeTable_CheckOrder(T, &q, &p, NULL);
+    if (retval != 1 || q != 3)
+    {
+      printf("  FAIL: CheckOrder with stored order 1 returned %d, q = %d\n",
+             retval, q);
+      fails++;
+    }
+    FIRKodeTable_Free(T);
   }
 
   /* copying a table and writing it does not crash */

@@ -128,5 +128,11 @@ the block solves are performed to a tolerance :math:`\epsilon_L = \epsilon\,
 is the nonlinear solver convergence coefficient (see
 :c:func:`FIRKodeSetNonlinConvCoef`), :math:`\epsilon` is the factor set by
 :c:func:`FIRKodeSetEpsLin`, and :math:`n_f` is the norm conversion factor
-set by :c:func:`FIRKodeSetLSNormFactor`. The corresponding tolerance for the
-stacked stage system is controlled by :c:func:`FIRKodeSetStageEpsLin`.
+set by :c:func:`FIRKodeSetLSNormFactor`. For the error estimate, whose
+right-hand side :math:`b` may be small, the tolerance is
+:math:`\epsilon\, \min(\epsilon_{nls}, \|b\|)\, n_f`, so that a small
+estimate is computed rather than taken as zero; block solves that
+precondition the stacked stage system use the tolerance
+:math:`\epsilon\, \|b\|\, n_f` relative to their right-hand side. The
+corresponding tolerance for the stacked stage system is controlled by
+:c:func:`FIRKodeSetStageEpsLin`.

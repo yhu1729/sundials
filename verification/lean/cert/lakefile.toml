@@ -1,0 +1,10 @@
+name = "firkode_cert"
+version = "0.1.0"
+defaultTargets = ["FirkodeCert"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "FirkodeCert"

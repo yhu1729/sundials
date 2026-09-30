@@ -14,7 +14,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * SUNDIALS Copyright End
  * -----------------------------------------------------------------------------
- * Unit test for setting the stop time (adapted from the CVODE test)
+ * Unit test for setting the stop time (adapted from the CVODE test), with
+ * adaptive steps and with a fixed step size
  * ---------------------------------------------------------------------------*/
 
 #include <stdio.h>
@@ -51,6 +52,81 @@ static int ode_jac(sunrealtype t, N_Vector y, N_Vector f, SUNMatrix J,
   sunrealtype* J_data = SUNDenseMatrix_Data(J);
   J_data[0]           = ZERO;
   return 0;
+}
+
+/* In fixed-step mode the step shortened to reach the stop time must not
+   shrink the steps that follow it */
+static int test_fixed_step(SUNContext sunctx)
+{
+  N_Vector y         = NULL;
+  SUNMatrix A        = NULL;
+  SUNLinearSolver LS = NULL;
+  void* firkode_mem  = NULL;
+  int flag, result = 1;
+  long int nst      = 0;
+  sunrealtype tret  = ZERO;
+  sunrealtype hlast = ZERO;
+
+  const sunrealtype hfixed = SUN_RCONST(0.1);
+  const sunrealtype tstop  = SUN_RCONST(0.25);
+  const sunrealtype tout   = ONE;
+  const sunrealtype tol    = SUN_RCONST(100.0) * SUN_UNIT_ROUNDOFF;
+
+  y = N_VNew_Serial(1, sunctx);
+  if (!y) { goto cleanup; }
+  N_VConst(ZERO, y);
+
+  firkode_mem = FIRKodeCreate(sunctx);
+  if (!firkode_mem) { goto cleanup; }
+  if (FIRKodeInit(firkode_mem, ode_rhs, ZERO, y)) { goto cleanup; }
+  if (FIRKodeSStolerances(firkode_mem, SUN_RCONST(1.0e-4), SUN_RCONST(1.0e-8)))
+  {
+    goto cleanup;
+  }
+
+  A = SUNDenseMatrix(1, 1, sunctx);
+  if (!A) { goto cleanup; }
+  LS = SUNLinSol_Dense(y, A, sunctx);
+  if (!LS) { goto cleanup; }
+  if (FIRKodeSetLinearSolver(firkode_mem, LS, A)) { goto cleanup; }
+  if (FIRKodeSetJacFn(firkode_mem, ode_jac)) { goto cleanup; }
+
+  if (FIRKodeSetFixedStep(firkode_mem, hfixed)) { goto cleanup; }
+  if (FIRKodeSetStopTime(firkode_mem, tstop)) { goto cleanup; }
+
+  /* steps 0.1, 0.1 and 0.05 reach the stop time */
+  flag = FIRKodeEvolve(firkode_mem, tout, y, &tret, FIRK_NORMAL);
+  printf("fixed step: return = %i, tret = %" GSYM "\n", flag, tret);
+  if (flag != FIRK_TSTOP_RETURN || SUNRabs(tret - tstop) > tol)
+  {
+    printf("ERROR: Expected stop return at %" GSYM "!\n", tstop);
+    goto cleanup;
+  }
+
+  /* eight more steps of 0.1 pass the output time */
+  flag = FIRKodeEvolve(firkode_mem, tout, y, &tret, FIRK_NORMAL);
+  if (flag < 0) { goto cleanup; }
+  if (FIRKodeGetLastStep(firkode_mem, &hlast)) { goto cleanup; }
+  if (FIRKodeGetNumSteps(firkode_mem, &nst)) { goto cleanup; }
+  printf("fixed step: return = %i, tret = %" GSYM ", last step = %" GSYM
+         ", steps = %li, y = %" GSYM "\n",
+         flag, tret, hlast, nst, N_VGetArrayPointer(y)[0]);
+  if (flag != FIRK_SUCCESS || SUNRabs(tret - tout) > tol ||
+      SUNRabs(hlast - hfixed) > tol || nst != 11 ||
+      SUNRabs(N_VGetArrayPointer(y)[0] - tout) > tol)
+  {
+    printf("ERROR: Expected steps of %" GSYM " after the stop time!\n", hfixed);
+    goto cleanup;
+  }
+
+  result = 0;
+
+cleanup:
+  FIRKodeFree(&firkode_mem);
+  N_VDestroy(y);
+  SUNMatDestroy(A);
+  SUNLinSolFree(LS);
+  return result;
 }
 
 int main(int argc, char* argv[])
@@ -204,6 +280,9 @@ int main(int argc, char* argv[])
   N_VDestroy(y);
   SUNMatDestroy(A);
   SUNLinSolFree(LS);
+
+  if (!flag) { flag = test_fixed_step(sunctx); }
+
   SUNContext_Free(&sunctx);
 
   if (!flag) { printf("SUCCESS\n"); }

@@ -61,8 +61,19 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem);
 static void firkLsFreeStacked(FIRKLsMem firkls_mem);
 static int firkLsMapSolveFlag(FIRKodeMem firk_mem, FIRKLsMem firkls_mem,
                               int retval, int curiter);
+
+/* Purposes of a solve with the block matrix M - gamma J; they differ in the
+   tolerance given to an iterative block solver and in how its failures are
+   treated */
+typedef enum
+{
+  FIRKLS_BLOCK_NEWTON,   /* Newton system of the single-stage method */
+  FIRKLS_BLOCK_ESTIMATE, /* filtered error estimate */
+  FIRKLS_BLOCK_PRECOND   /* preconditioner application in the stacked solve */
+} firkLsBlockSolve;
+
 static int firkLsSolveBlockImpl(FIRKodeMem firk_mem, N_Vector b,
-                                N_Vector weight, sunbooleantype strict);
+                                N_Vector weight, firkLsBlockSolve kind);
 
 /*===============================================================
   FIRKLS Exported functions -- Required
@@ -1030,7 +1041,8 @@ int firkLsStackedPSolve(void* firkode_mem, N_Vector r_stk, N_Vector z_stk,
     if (firkls_mem->matrixbased)
     {
       N_VScale(ONE, r_i, z_i);
-      retval = firkLsSolveBlockImpl(firk_mem, z_i, firk_mem->ewt, SUNFALSE);
+      retval = firkLsSolveBlockImpl(firk_mem, z_i, firk_mem->ewt,
+                                    FIRKLS_BLOCK_PRECOND);
       if (retval != 0) { return retval; }
     }
     else if (firkls_mem->psolve != NULL)
@@ -1796,22 +1808,22 @@ static int firkLsMapSolveFlag(FIRKodeMem firk_mem, FIRKLsMem firkls_mem,
 /*-----------------------------------------------------------------
   firkLsSolveBlock
 
-  Solves the block system (M - gamma J) x = b in place with the
-  user's linear solver, setting tolerances and scaling vectors
-  for iterative solvers.
+  Solves the block system (M - gamma J) x = b of the filtered error
+  estimate in place with the user's linear solver, setting
+  tolerances and scaling vectors for iterative solvers.
   -----------------------------------------------------------------*/
 int firkLsSolveBlock(FIRKodeMem firk_mem, N_Vector b, N_Vector weight)
 {
-  return firkLsSolveBlockImpl(firk_mem, b, weight, SUNTRUE);
+  return firkLsSolveBlockImpl(firk_mem, b, weight, FIRKLS_BLOCK_ESTIMATE);
 }
 
-/* When strict is false the solve is a preconditioner application for the
-   stacked Krylov iteration: an iterative block solver that only reduced the
-   residual (or ran out of iterations) still provides a useful approximate
-   solution, which the flexible GMRES iteration can use, so such outcomes are
-   not reported as failures. */
+/* For a preconditioner application in the stacked Krylov iteration, an
+   iterative block solver that only reduced the residual (or ran out of
+   iterations) still provides a useful approximate solution, which the
+   flexible GMRES iteration can use, so such outcomes are not reported as
+   failures. */
 static int firkLsSolveBlockImpl(FIRKodeMem firk_mem, N_Vector b,
-                                N_Vector weight, sunbooleantype strict)
+                                N_Vector weight, firkLsBlockSolve kind)
 {
   FIRKLsMem firkls_mem;
   sunrealtype bnorm = ZERO;
@@ -1837,10 +1849,11 @@ static int firkLsSolveBlockImpl(FIRKodeMem firk_mem, N_Vector b,
   {
     bnorm = N_VWrmsNorm(b, weight);
 
-    if (strict)
+    if (kind == FIRKLS_BLOCK_NEWTON)
     {
-      /* Newton system or error estimate: tolerance relative to the nonlinear
-         solver tolerance, as in CVODE */
+      /* Newton system: tolerance relative to the nonlinear solver tolerance,
+         as in CVODE; a smaller correction is negligible after the first
+         iteration */
       deltar = firkls_mem->eplifac * firk_mem->nlscoef;
 
       SUNLogInfo(FIRK_LOGGER, "begin-block-linear-solve",
@@ -1860,14 +1873,22 @@ static int firkLsSolveBlockImpl(FIRKodeMem firk_mem, N_Vector b,
     }
     else
     {
-      /* preconditioner application: the right-hand side is a Krylov basis
-         vector of arbitrary scale, so the tolerance must be relative to it
-         and the solve must not be skipped */
-      deltar = firkls_mem->eplifac * bnorm;
+      /* error estimate: the solution is the estimate itself, so the solve is
+         not skipped for a small right-hand side, and the tolerance of the
+         Newton system is tightened to one relative to b when b is smaller
+         than the nonlinear solver tolerance, so that a small estimate is
+         resolved instead of returned as zero. Preconditioner application:
+         the right-hand side is a Krylov basis vector of arbitrary scale, so
+         the tolerance is relative to it. */
+      deltar = (kind == FIRKLS_BLOCK_ESTIMATE)
+                 ? firkls_mem->eplifac * SUNMIN(firk_mem->nlscoef, bnorm)
+                 : firkls_mem->eplifac * bnorm;
 
       SUNLogInfo(FIRK_LOGGER, "begin-block-linear-solve",
-                 "iterative = 1, preconditioner application, b-norm "
-                 "= " SUN_FORMAT_G ", res-tol = " SUN_FORMAT_G,
+                 "iterative = 1, %s, b-norm = " SUN_FORMAT_G
+                 ", res-tol = " SUN_FORMAT_G,
+                 (kind == FIRKLS_BLOCK_ESTIMATE) ? "error estimate"
+                                                 : "preconditioner application",
                  bnorm, deltar * firkls_mem->nrmfac);
 
       if (bnorm == ZERO)
@@ -1922,7 +1943,8 @@ static int firkLsSolveBlockImpl(FIRKodeMem firk_mem, N_Vector b,
   }
   firkls_mem->nli += nli_inc;
 
-  if (!strict && (retval == SUNLS_RES_REDUCED || retval == SUNLS_CONV_FAIL))
+  if (kind == FIRKLS_BLOCK_PRECOND &&
+      (retval == SUNLS_RES_REDUCED || retval == SUNLS_CONV_FAIL))
   {
     firkls_mem->last_flag = retval;
     SUNLogInfo(FIRK_LOGGER, "end-block-linear-solve",
@@ -1966,8 +1988,8 @@ int firkLsSolveStacked(FIRKodeMem firk_mem, N_Vector b_stk)
   /* single stage: the block solve is the exact Newton solve */
   if (firk_mem->s == 1)
   {
-    return firkLsSolveBlock(firk_mem, N_VGetSubvector_ManyVector(b_stk, 0),
-                            firk_mem->ewt);
+    return firkLsSolveBlockImpl(firk_mem, N_VGetSubvector_ManyVector(b_stk, 0),
+                                firk_mem->ewt, FIRKLS_BLOCK_NEWTON);
   }
 
   curiter = 0;

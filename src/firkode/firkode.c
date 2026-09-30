@@ -2341,9 +2341,16 @@ static int firkCompleteStep(FIRKodeMem firk_mem, sunrealtype dsm)
   }
 
   firk_mem->nst++;
-  firk_mem->tn     = firk_mem->tcur;
-  firk_mem->hprime = firk_mem->h * firk_mem->eta;
-  firk_mem->dsm    = dsm;
+  firk_mem->tn = firk_mem->tcur;
+  if (firk_mem->fixedstep)
+  {
+    /* return to the fixed step size, which the step to tstop may have
+       shortened */
+    firk_mem->eta    = ONE;
+    firk_mem->hprime = firk_mem->hin;
+  }
+  else { firk_mem->hprime = firk_mem->h * firk_mem->eta; }
+  firk_mem->dsm = dsm;
 
   firk_mem->hadapt_mem->etamax = firk_mem->hadapt_mem->growth;
 

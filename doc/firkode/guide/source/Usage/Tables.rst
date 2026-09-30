@@ -116,19 +116,18 @@ e.g., through :c:func:`FIRKodeGetCurrentTable`, or to verify the tables.
 
    Determines the order of accuracy of the method defined by the table ``T``
    by checking the quadrature, collocation, and simplifying order conditions
-   numerically, and compares the result with the orders stored in the table.
+   numerically, and compares the result with the order stored in the table.
 
    **Arguments:**
       - ``T`` -- the table to check.
       - ``q`` -- on output, the order of accuracy determined from the order conditions.
-      - ``p`` -- on output, the order of the error estimate determined from the order conditions.
+      - ``p`` -- on output, the order of the error estimate stored in the table; it is not checked.
       - ``outfile`` -- if non-``NULL``, a file pointer to which the results of the individual condition checks are written.
 
    **Return value:**
-      - 0 if the determined orders match those stored in the table, 1 if the
-        determined orders are higher than the stored ones (a warning), and -1
-        if the determined orders are lower than the stored ones or the table
-        is invalid.
+      - 0 if the determined order matches the order stored in the table, 1 if
+        it is higher than the stored order (a warning), and -1 if it is lower
+        than the stored order or the table is invalid.
 
    **Notes:**
       The order conditions are checked with a tolerance that scales with the

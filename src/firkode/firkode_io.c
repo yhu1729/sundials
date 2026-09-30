@@ -77,7 +77,7 @@ int FIRKodeSetOrder(void* firkode_mem, int ord)
   int s;
 
   if (ord <= 0) { s = FIRK_DEFAULT_STAGES; }
-  else { s = (ord + 2) / 2; } /* smallest s with 2s-1 >= ord */
+  else { s = ord / 2 + 1; } /* smallest s with 2s-1 >= ord; no overflow */
 
   return FIRKodeSetNumStages(firkode_mem, s);
 }
