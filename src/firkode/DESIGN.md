@@ -443,7 +443,7 @@ which the Dahlquist test of Chapter 11 checks.
 ### 4.5 Single-shift block preconditioning
 
 The Newton matrix $K = I_s \otimes M - hA \otimes J$ couples all stages. RADAU5 transforms $A^{-1}$ to
-real block-diagonal form and factors one real and $\lfloor \frac{s}{2} \rfloor$ complex $N \times N$ matrices
+real block-diagonal form and factors one real and $\left\lfloor \frac{s}{2} \right\rfloor$ complex $N \times N$ matrices
 [1976B, 1977B]. FIRKODE instead solves $K \delta = r$ with right-preconditioned flexible GMRES
 [1993S] and the preconditioner
 
@@ -474,7 +474,7 @@ every $h$ and $N$. With $p(w) = \left(1 - \frac{w}{c}\right)^k$ in the GMRES bou
 $$
 \frac{\lVert r_k \rVert}{\lVert r_0 \rVert} \le \kappa \rho_\ast(\gamma_0)^k,
 \quad
-\rho_\ast(\gamma) = \min_{c > 0} \max_{w \in \cup_j D_j} \Bigl\lvert 1 - \frac{w}{c} \Bigr\rvert,
+\rho_\ast(\gamma) = \min_{c > 0} \max_{w \in \cup_j D_j} \left\lvert 1 - \frac{w}{c} \right\rvert,
 $$
 
 where $\kappa$ collects the conditioning of the eigenvector matrices. The bound is independent of the
@@ -503,7 +503,7 @@ $\gamma_0$, and let $e^T = (\hat b - b)^T A^{-1}$, so that $e_j = -\frac{\gamma_
 the Lagrange basis on the nodes `[proved]`. The estimate is
 
 $$
-\mathrm{err} = (M - \gamma J)^{-1} \Bigl[ \gamma f(t_n, y_n) + \sum_{i=1}^{s} e_i M Z_i \Bigr],
+\mathrm{err} = (M - \gamma J)^{-1} \Bigl[ \gamma f\left(t_n, y_n\right) + \sum_{i=1}^{s} e_i M Z_i \Bigr],
 \quad \gamma = h \gamma_0,
 $$
 
@@ -513,7 +513,7 @@ $s = 3$ the weights are RADAU5's `[proved]`.
 
 - The filter $(M - \gamma J)^{-1}$ reuses the preconditioner's matrix and keeps the estimate bounded
   for stiff components as $h \to \infty$ (Figure 4).
-- $\mathrm{dsm} = \max(\lVert \mathrm{err} \rVert, 10^{-10})$; the floor is RADAU5's and also keeps
+- $\mathrm{dsm} = \max\left(\lVert \mathrm{err} \rVert, 10^{-10}\right)$; the floor is RADAU5's and also keeps
   the controller away from $\mathrm{dsm} = 0$. The step is accepted if $\mathrm{dsm} \le 1$.
 - On the first step and after a rejection, a failing estimate is filtered again with
   $f(t_n, y_n + \mathrm{err})$ in place of $f(t_n, y_n)$, as in RADAU5. The refilter is on by
