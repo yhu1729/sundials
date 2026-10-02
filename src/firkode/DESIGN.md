@@ -76,11 +76,17 @@ solvers, controllers, logging and profiling are what RADAU5 never had.
 *Table 1.1. Decision record; D-numbers refer to Chapter 5. The principles P1–P4 are stated in
 Chapter 2.*
 
-### 1.4 Scope of v0.1.0
+### 1.4 Scope
+
+#### In v0.1.0
 
 Milestones M0–M3 of Chapter 10, that is a RADAU5-equivalent integrator with
 SUNDIALS' interfaces, rootfinding, a constant mass matrix, logging, profiling, command-line options,
-and a validation suite that later versions run unchanged. Not in v0.1.0: $s \ne 3$, order selection,
+and a validation suite that later versions run unchanged.
+
+#### Not in v0.1.0
+
+$s \ne 3$, order selection,
 EXPERT hooks, SUNStepper glue, time-dependent or singular $M$, sensitivities, relaxation, resizing,
 and language bindings. Chapter 7 states the costs and risks, and what is asked of the SUNDIALS
 maintainers.
