@@ -112,7 +112,7 @@ Chapter 10 names the principle it follows.
   its Newton iteration. The stacked iteration, the block-preconditioned stage solve, the Jacobian and
   factorization reuse policies, and the measurement gates on Krylov iteration counts are the centre of
   the architecture and of the cost model. The expert hooks of v0.4 exist to let users change the stage
-  solver, not for generality.
+  solver.
 
 ## 3. Motivation
 
@@ -229,12 +229,14 @@ Each decision below is argued in Chapter 5; this section states the thread that 
 
 ### 3.5 Scope and non-goals
 
-In scope for v0.1.0: $M \dot y = f(t, y)$ with constant nonsingular $M$, forward and backward
+#### In scope for v0.1.0
+
+$M \dot y = f(t, y)$ with constant nonsingular $M$, forward and backward
 integration, the 3-stage method, adaptive and fixed steps, rootfinding, dense output, the complete
 CVODE and ARKODE linear-solver interface for the block $M - \gamma J$, logging, profiling, statistics,
 command-line options and a validation suite.
 
-Not in scope:
+#### Not in scope
 
 - **Singular** $M$ **and DAEs.** Radau IIA is a classical DAE method up to index 3 [1989HLR], but
   consistent initialization and index-aware error scaling are a project of their own. IDA covers
@@ -245,7 +247,7 @@ Not in scope:
   bindings are a follow-up once the API has settled.
 - **Device-specific kernels.** Any `N_Vector` works through its own operations. No GPU-specific code.
 
-### 3.6 Migrate to FIRKODE
+### 3.6 Migrating to FIRKODE
 
 The target user integrates a stiff system with CVODE or ARKStep today and either needs higher order
 with L-stability, has an oscillatory stiff spectrum, works at tight tolerances, or needs a mass
@@ -352,7 +354,7 @@ $$
 
 Write $F_j = f(t_n + c_j h, Y_j)$. The stage equations read
 $(I_s \otimes M) Z = h (A \otimes I_N) F$, and $A$ is nonsingular for a collocation method
-($\det A = \frac{\prod_i c_i}{s!}$). Hence $h F = (A^{-1} \otimes M) Z$, and the quadrature update
+$\left(\det A = \frac{\prod_i c_i}{s!} \right)$. Hence $h F = (A^{-1} \otimes M) Z$, and the quadrature update
 $M (y_{n+1} - y_n) = h \sum_j b_j F_j$ becomes $M \sum_j d_j Z_j$. The update needs neither the
 $F_j$ nor $M^{-1}$.
 
@@ -366,7 +368,7 @@ value is the collocation polynomial there. The step ends with one vector additio
 
 #### Why use increments?
 
-The Newton iteration determines $Z$ to the tolerance $\epsilon_{nls}$. Any error
+The Newton iteration determines $Z$ to the tolerance $\epsilon_{\text{nls}}$. Any error
 in $Y_j$ is amplified by $\lVert J \rVert$ in $F_j$, and $h \lVert J \rVert \gg 1$ on stiff
 components, so the form $y_n + h \sum_j b_j F_j$ inherits that amplification while
 $y_n + \sum_j d_j Z_j$ does not [1996HW, §IV.8]. The same holds for roundoff in $F_j$.
@@ -380,7 +382,7 @@ core (Milestone M10). For Radau IIA the sum collapses to a copy of $Z_s$.
 #### Notation notes
 
 The bold $\mathbf{e}_s$ is the unit vector. The italic $e$ of Section 4.6 is the
-estimate weight vector $e^T = (\hat b - b)^T A^{-1}$; its last entry is $e_s = (-1)^s \frac{\gamma_0}{s}$
+estimate weight vector $e^T = (\hat b - b)^T A^{-1}$; its last entry is $e_s = (-1)^s \cdot \frac{\gamma_0}{s}$
 `[proved]`.
 
 ### 4.4 Simplified Newton iteration
@@ -390,7 +392,7 @@ equations, $G_i(Z) = M Z_i - h \sum_j a_{ij} F_j$. Starting from the predictor $
 4.9, iteration $k = 1, 2, \dots, m$ computes
 
 $$
-(I_s \otimes M - hA \otimes J)\, \delta^{(k)} = -G(Z^{(k-1)}),
+(I_s \otimes M - hA \otimes J) \delta^{(k)} = -G(Z^{(k-1)}),
 \quad Z^{(k)} = Z^{(k-1)} + \delta^{(k)},
 $$
 
@@ -416,10 +418,10 @@ If $\theta_k \ge 0.99$ the solve fails and the step is halved.
 
 #### Predicted failure
 
-If $\eta_k\, \theta_k^{\,m-1-k}\, \lVert \delta^{(k)} \rVert > \epsilon_{nls}$,
+If $\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert > \epsilon_{nls}$,
 convergence is not expected within the remaining iterations; the solve fails and the step is
-multiplied by $0.8\, q^{-\frac{1}{4 + m - 1 - k}}$ with
-$q = \mathrm{clamp}\Bigl(\frac{\eta_k \theta_k^{\,m-1-k} \lVert \delta^{(k)} \rVert}{\epsilon_{nls}},\ 10^{-4},\ 20\Bigr)$.
+multiplied by $0.8 q^{-\frac{1}{4 + m - 1 - k}}$ with
+$q = \mathrm{clamp}\Bigl(\frac{\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert}{\epsilon_{nls}},\ 10^{-4},\ 20\Bigr)$.
 The exponent $m - 1 - k$ is RADAU5's; it predicts at the second-to-last iteration.
 
 #### Stop
@@ -452,12 +454,12 @@ $$
 
 - Odd $s$: $\gamma_0 = \frac{1}{U_1}$, with $U_1$ the unique real eigenvalue of $A^{-1}$ `[proved]`. One
   mode is preconditioned exactly. For $s = 3$ this is RADAU5's real factor.
-- Even $s$: $A^{-1}$ has no real eigenvalue `[proved]`. $\gamma_0 = \frac{1}{\mathrm{Re}\, \lambda_\ast}$, with $\lambda_\ast$ the eigenvalue of $A^{-1}$ of smallest modulus. This is a
+- Even $s$: $A^{-1}$ has no real eigenvalue `[proved]`. $\gamma_0 = \frac{1}{\mathrm{Re} \lambda_\ast}$, with $\lambda_\ast$ the eigenvalue of $A^{-1}$ of smallest modulus. This is a
   heuristic without an exactly preconditioned mode; even $s$ is an EXPERT-mode option (D7).
 - Applying $P^{-1}$ costs $s$ independent solves with one matrix. For $s = 1$, $P = K$ and the
   Krylov iteration is skipped.
 
-Assume $M^{-1} J = V \Lambda V^{-1}$ with $\mathrm{Re}\, \lambda \le 0$, and let $\mu_j$ be the
+Assume $M^{-1} J = V \Lambda V^{-1}$ with $\mathrm{Re} \lambda \le 0$, and let $\mu_j$ be the
 eigenvalues of $A$. Then $K P^{-1}$ is similar to a diagonal matrix with the entries
 
 $$
@@ -465,12 +467,12 @@ w_j(z) = \frac{1 - z \mu_j}{1 - \gamma_0 z},
 \quad z = h \lambda.
 $$
 
-Each $w_j$ is a Möbius map with its pole in the right half-plane, so it maps $\mathrm{Re}\, z \le 0$
+Each $w_j$ is a Möbius map with its pole in the right half-plane, so it maps $\mathrm{Re} z \le 0$
 onto a closed disk $D_j$ through $1$ and $\frac{\mu_j}{\gamma_0}$. The spectrum lies in $\cup_j D_j$ for
 every $h$ and $N$. With $p(w) = \left(1 - \frac{w}{c}\right)^k$ in the GMRES bound [1986SS], exact block solves give
 
 $$
-\frac{\lVert r_k \rVert}{\lVert r_0 \rVert} \le \kappa\, \rho_\ast(\gamma_0)^k,
+\frac{\lVert r_k \rVert}{\lVert r_0 \rVert} \le \kappa \rho_\ast(\gamma_0)^k,
 \quad
 \rho_\ast(\gamma) = \min_{c > 0} \max_{w \in \cup_j D_j} \Bigl\lvert 1 - \frac{w}{c} \Bigr\rvert,
 $$
@@ -497,7 +499,7 @@ worst-case $k$ of Table 4.1 for $s \ge 7$.
 ### 4.6 Temporal error estimate
 
 Let $\hat b$ be the embedded quadrature of order $s$ that adds the left end point with weight
-$\gamma_0$, and let $e^T = (\hat b - b)^T A^{-1}$, so that $e_j = -\frac{\gamma_0\, l_j(0)}{c_j}$ with $l_j$
+$\gamma_0$, and let $e^T = (\hat b - b)^T A^{-1}$, so that $e_j = -\frac{\gamma_0 l_j(0)}{c_j}$ with $l_j$
 the Lagrange basis on the nodes `[proved]`. The estimate is
 
 $$
@@ -522,7 +524,7 @@ $s = 3$ the weights are RADAU5's `[proved]`.
 The controllers of [2003S, 2025KC] have the form
 
 $$
-h_{n+1} = \kappa\, h_n
+h_{n+1} = \kappa h_n
 \Bigl( \frac{\epsilon}{\lVert \delta_n \rVert} \Bigr)^{\alpha}
 \Bigl( \frac{\lVert \delta_{n-1} \rVert}{\epsilon} \Bigr)^{\beta}
 \Bigl( \frac{\epsilon}{\lVert \delta_{n-2} \rVert} \Bigr)^{\gamma}
@@ -545,7 +547,7 @@ the coefficients for error per step [2025KC, Table 2]:
 
 *Table 4.2. Step-size controllers and their SUNDIALS realizations. The generic
 `SUNAdaptController_Soderlind` evaluates*
-$h_{n+1} = h_n\, \varepsilon_n^{-\frac{k_1}{k}} \varepsilon_{n-1}^{-\frac{k_2}{k}} \varepsilon_{n-2}^{-\frac{k_3}{k}} \left(\frac{h_n}{h_{n-1}}\right)^{k_4} \left(\frac{h_{n-1}}{h_{n-2}}\right)^{k_5}$
+$h_{n+1} = h_n \varepsilon_n^{-\frac{k_1}{k}} \varepsilon_{n-1}^{-\frac{k_2}{k}} \varepsilon_{n-2}^{-\frac{k_3}{k}} \left(\frac{h_n}{h_{n-1}}\right)^{k_4} \left(\frac{h_{n-1}}{h_{n-2}}\right)^{k_5}$
 *with* $\varepsilon = \mathrm{bias} \cdot \mathrm{dsm}$ *and* $k = p + 1$
 *`[fact: src/sunadaptcontroller/soderlind/sunadaptcontroller_soderlind.c]`; the mapping is*
 $(k_1, \dots, k_5) = (\alpha k, -\beta k, \gamma k, a, b)$. *There are no built-in PPID or H321
@@ -558,7 +560,7 @@ has no hook for them:
 - the safety factor $\kappa = 0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$, with $k_{nls}$ the
   Newton iterations of the step, so that a step that needed many iterations grows less;
 - in BEGINNER mode the smaller of the controller's proposal and the I-controller's
-  $\kappa\, h_n\, \mathrm{dsm}^{-\frac{1}{s+1}}$, which is RADAU5's `QUOT = MAX(QUOT, FACGUS)`;
+  $\kappa h_n \mathrm{dsm}^{-\frac{1}{s+1}}$, which is RADAU5's `QUOT = MAX(QUOT, FACGUS)`;
 - the ratio limits $\frac{h_{n+1}}{h_n} \in [0.2, 8]$; $10^4$ on the first step; $0.1$ when the first step
   is rejected; $0.3$ after two consecutive error-test failures (an ARKODE safeguard, not in RADAU5);
   $0.5$ after a Newton divergence; `hmin` and `hmax` as set by the user;
@@ -586,8 +588,8 @@ default of $10^{-6}$; this is a deliberate deviation (Table 6.2).
 Within a step, the collocation polynomial
 
 $$
-u(t_n + \vartheta h) = y_n + \sum_{j=1}^{s} L_j(\vartheta)\, Z_j
-= y_{n+1} + \sum_{j=1}^{s} \bigl(L_j(\vartheta) - \delta_{js}\bigr)\, Z_j
+u(t_n + \vartheta h) = y_n + \sum_{j=1}^{s} L_j(\vartheta) Z_j
+= y_{n+1} + \sum_{j=1}^{s} \bigl(L_j(\vartheta) - \delta_{js}\bigr) Z_j
 $$
 
 is available at no extra cost. $L_j$ is the Lagrange basis on $0, c_1, \dots, c_s$ with $L_j(0) = 0$,
@@ -640,7 +642,7 @@ Rule, evaluated whenever $M - \gamma J$ is refactored and at the latest after 10
 The work per unit step,
 
 $$
-W(s) = \frac{k_{nls}\,\bigl[\, s\, C_f + k_{lin}\, s\, (C_{sol} + C_{Jv}) \,\bigr]}{h},
+W(s) = \frac{k_{nls}\bigl[ s C_f + k_{lin} s (C_{sol} + C_{Jv}) \bigr]}{h},
 $$
 
 with $C_f$, $C_{sol}$, $C_{Jv}$ the running average wall-clock costs of one RHS evaluation, block solve
@@ -731,7 +733,7 @@ complex factorizations per setup. SUNDIALS has real vectors, matrices and solver
 | ------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
 | (a) RADAU5 transformation, complex LU [1976B, 1977B]                            | yes                 | 1 real + $\lfloor \frac{s}{2} \rfloor$ complex      | $1 + \lfloor \frac{s}{2} \rfloor$ (complex counted once)     | dense and banded direct solvers                                       | complex `sunrealtype`, `SUNMatrix`, `SUNLinearSolver` | rejected                                       |
 | (b) transformation with real $2N \times 2N$ blocks                              | yes                 | 1 real + $\lfloor \frac{s}{2} \rfloor$ of size $2N$ | as (a)                                                       | direct solvers; defeats $N \times N$ user preconditioners             | a $2N$ block interface                                | rejected                                       |
-| (c) FGMRES with $I_s \otimes (M - h\gamma_0 J)$                                 | no, to tolerance    | 1 real                                              | $s\, k_{lin}$ block solves and $J$-products                  | every `SUNLinearSolver`, preconditioner-only Krylov, AMG, batched GPU | none                                                  | chosen                                         |
+| (c) FGMRES with $I_s \otimes (M - h\gamma_0 J)$                                 | no, to tolerance    | 1 real                                              | $s k_{lin}$ block solves and $J$-products                  | every `SUNLinearSolver`, preconditioner-only Krylov, AMG, batched GPU | none                                                  | chosen                                         |
 | (d) $s$ real factorizations with a real-spectrum $B \approx A$ [1991HS, 1997HS] | no, inner iteration | $s$ real                                            | $s$ independent                                              | direct solvers, stage-parallel                                        | none                                                  | possible EXPERT stage preconditioner (M6, M10) |
 | (e) one real preconditioner per conjugate pair [2022SKPD, 2022SKP]              | no, to tolerance    | $\lceil \frac{s}{2} \rceil$ real                    | $\lceil \frac{s}{2} \rceil$ real solves per Krylov iteration | preconditioner-only solvers                                           | none                                                  | possible EXPERT stage preconditioner (M6)      |
 | (f) user-supplied monolithic solver, e.g. multigrid [2005VV, 2024K]             | user's              | user's                                              | user's                                                       | PDE codes with a stage-system hierarchy                               | none                                                  | EXPERT hook `SetStageLinearSolver` (M6)        |
@@ -755,9 +757,9 @@ Option (c), with (d), (e) and (f) reachable through the v0.4 hooks.
 
 #### Cost
 
-$s\, k_{lin}$ block solves and $J$-products per Newton iteration instead of
+$s k_{lin}$ block solves and $J$-products per Newton iteration instead of
 $1 + \lfloor \frac{s}{2} \rfloor$ exact solves; for small dense systems with infrequent setups the complex
-factorization is cheaper in flops (Table 7.2). FGMRES stores $2\,\mathrm{maxl} + 4$ stacked vectors,
+factorization is cheaper in flops (Table 7.2). FGMRES stores $2\mathrm{maxl} + 4$ stacked vectors,
 which dominate the memory footprint (Table 8.7).
 
 #### Details
@@ -1157,7 +1159,7 @@ counts or make nominally equal runs different accuracy requests.
 
 | Element                  | RADAU5                                                                                             | FIRKODE                                                  | Effect on comparisons                                                                                  |
 | ------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| tolerances               | replaces $\mathrm{rtol}$ by $0.1\, \mathrm{rtol}^{\frac{2}{3}}$ and scales $\mathrm{atol}$ with it | uses the tolerances as given, as CVODE does              | equal nominal tolerances are different accuracy requests; the comparison harness of M2 transforms them |
+| tolerances               | replaces $\mathrm{rtol}$ by $0.1 \mathrm{rtol}^{\frac{2}{3}}$ and scales $\mathrm{atol}$ with it | uses the tolerances as given, as CVODE does              | equal nominal tolerances are different accuracy requests; the comparison harness of M2 transforms them |
 | Newton tolerance         | $\max\Bigl(\frac{10u}{\mathrm{rtol}'}, \min(0.03, \sqrt{\mathrm{rtol}'})\Bigr)$                    | fixed $\epsilon_{nls} = 0.1$; EXPERT can set it          | Newton counts differ at loose tolerances                                                               |
 | initial step             | fixed default $10^{-6}$                                                                            | CVODE's heuristic (Section 4.8)                          | the first steps differ                                                                                 |
 | stage solve              | exact, complex LU                                                                                  | inexact FGMRES to $\epsilon_{stk} \epsilon_{nls}$        | Newton counts may differ by the inexactness; see [2000J]                                               |
@@ -1195,12 +1197,12 @@ FGMRES iterations per Newton iteration are parameters until measured.
 
 | Quantity per step                       | FIRKODE, $s$ stages                                                                                                              | CVODE BDF                          | ARKStep ESDIRK, $s_D$ implicit stages        | RADAU5, $s = 3$                                                                     |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| RHS evaluations                         | $s\, k_{nls} + 1$ (+1 with refilter)                                                                                             | $k_{nls} + 1$                      | $\approx s_D\, k_{nls} + 1$                  | $3 k_{nls} + 1$ (+1 with refilter)                                                  |
-| block solves with $M - \gamma J$        | $s\, k_{lin} k_{nls} + 1$ (+1 with refilter)                                                                                     | $k_{nls}$                          | $s_D\, k_{nls}$                              | $k_{nls}$ real and $k_{nls}$ complex (about $5 k_{nls}$ real-solve equivalents) + 1 |
-| products $J v$                          | $s\, k_{lin} k_{nls}$ (or RHS evaluations with difference quotients)                                                             | 0                                  | 0                                            | 0                                                                                   |
-| products $M v$ ($M \ne I$)              | $s\, k_{nls} (1 + k_{lin})$ + 1                                                                                                  | not applicable                     | $s_D k_{nls}$                                | folded into the transformation                                                      |
+| RHS evaluations                         | $s k_{nls} + 1$ (+1 with refilter)                                                                                             | $k_{nls} + 1$                      | $\approx s_D k_{nls} + 1$                  | $3 k_{nls} + 1$ (+1 with refilter)                                                  |
+| block solves with $M - \gamma J$        | $s k_{lin} k_{nls} + 1$ (+1 with refilter)                                                                                     | $k_{nls}$                          | $s_D k_{nls}$                              | $k_{nls}$ real and $k_{nls}$ complex (about $5 k_{nls}$ real-solve equivalents) + 1 |
+| products $J v$                          | $s k_{lin} k_{nls}$ (or RHS evaluations with difference quotients)                                                             | 0                                  | 0                                            | 0                                                                                   |
+| products $M v$ ($M \ne I$)              | $s k_{nls} (1 + k_{lin})$ + 1                                                                                                  | not applicable                     | $s_D k_{nls}$                                | folded into the transformation                                                      |
 | setups                                  | 1 real factorization of $M - \gamma J$ per setup                                                                                 | 1 per setup                        | 1 per setup                                  | 1 real + 1 complex factorization (about 5 real LU equivalents) per setup            |
-| vectors of length $N$ stored            | $11 + s(2\,\mathrm{maxl} + 10)$: 95 for $s = 3$, $\mathrm{maxl} = 9$                                                             | $q + 1$ Nordsieck + about 10       | $s_D$ stage RHS + about 10                   | about 12 plus the dense work array $4N^2$                                           |
+| vectors of length $N$ stored            | $11 + s(2\mathrm{maxl} + 10)$: 95 for $s = 3$, $\mathrm{maxl} = 9$                                                             | $q + 1$ Nordsieck + about 10       | $s_D$ stage RHS + about 10                   | about 12 plus the dense work array $4N^2$                                           |
 | global reductions per Krylov iteration  | $j + 2$ dot products at Arnoldi step $j$, each one allreduce with MPIManyVector, $s$ with a plain ManyVector over MPI subvectors | solver's                           | solver's                                     | none (direct)                                                                       |
 
 *Table 7.1. Work per step. The complex-arithmetic equivalents count a complex multiply-add as four
@@ -1212,8 +1214,8 @@ $s = 3$ and $k_{nls} = 2$:
 
 | Setup frequency        | FIRKODE cheaper in flops when         | $k_{lin} = 4$   | $k_{lin} = 12$ (bound of Table 4.1)    |
 | ---------------------- | ------------------------------------- | --------------- | -------------------------------------- |
-| every step             | $N > 9\, k_{lin} - 7.5$               | $N > 29$        | $N > 101$                              |
-| every 20 steps         | $N > 180\, k_{lin} - 150$             | $N > 570$       | $N > 2010$                             |
+| every step             | $N > 9 k_{lin} - 7.5$               | $N > 29$        | $N > 101$                              |
+| every 20 steps         | $N > 180 k_{lin} - 150$             | $N > 570$       | $N > 2010$                             |
 
 *Table 7.2. Break-even against a RADAU5-style complex LU for dense blocks. Memory: FIRKODE's*
 $2N^2 + 95N$ *(two matrices and 95 vectors) is below RADAU5's* $4N^2 + 12N$ *for* $N > 41$.
@@ -1362,11 +1364,11 @@ forbidden operations trap enforces the table (H9).*
 | history                | `hist.Z`                                                  | $s$                                                                        |
 | Newton                 | `Z`, `F`, `G` ($b$ formed in place), `delta`              | $4s$                                                                       |
 | stacked operator       | `Jv`, one $Mv$ temporary                                  | $s + 1$                                                                    |
-| SPFGMR                 | $2\,\mathrm{maxl} + 4$ stacked vectors                    | $s(2\,\mathrm{maxl} + 4)$                                                  |
+| SPFGMR                 | $2\mathrm{maxl} + 4$ stacked vectors                    | $s(2\mathrm{maxl} + 4)$                                                  |
 | FIRKLS block           | `x`, `ytemp`                                              | 2                                                                          |
 | mass                   | `x`                                                       | 1                                                                          |
 | weight view            | pointers only                                             | 0                                                                          |
-| total ($s \ge 2$)      | $11 + s(2\,\mathrm{maxl} + 10)$                           | 95 for $s = 3$, $\mathrm{maxl} = 9$; 587 for $s = 9$, $\mathrm{maxl} = 27$ |
+| total ($s \ge 2$)      | $11 + s(2\mathrm{maxl} + 10)$                           | 95 for $s = 3$, $\mathrm{maxl} = 9$; 587 for $s = 9$, $\mathrm{maxl} = 27$ |
 
 *Table 8.7. Vector budget. `FIRKodeGetWorkSpace` reports exactly this count (H27). For* $s = 1$ *the
 stacked rows are absent.*
@@ -1462,12 +1464,12 @@ counts every attempt.*
 | Outcome of the attempt                                                                             | $h$                                                | Setup at the next attempt            | $J$ re-evaluated                                      |
 | -------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------ | ----------------------------------------------------- |
 | `FIRK_NLS_DIVERGED`, `FIRK_NLS_MAXITER`                                                            | $\times 0.5$                                       | yes ($\gamma$ changed)               | only if it was not current at the failed setup        |
-| `FIRK_NLS_PREDICTED_FAIL`                                                                          | $\times\, 0.8\, q^{-\frac{1}{4+m-1-k}}$            | yes                                  | only if not current                                   |
+| `FIRK_NLS_PREDICTED_FAIL`                                                                          | $\times 0.8 q^{-\frac{1}{4+m-1-k}}$            | yes                                  | only if not current                                   |
 | `FIRK_NLS_RHS_RECVR`, `FIRK_NLS_LSOLVE_RECVR`, `FIRK_NLS_LSETUP_RECVR`, recoverable estimate solve | $\times 0.25$                                      | yes                                  | only if not current                                   |
-| error test failed, fewer than 2 consecutive failures                                               | $\times\, \eta$ from the controller                | yes                                  | per policy                                            |
+| error test failed, fewer than 2 consecutive failures                                               | $\times \eta$ from the controller                | yes                                  | per policy                                            |
 | error test failed, 2 or more consecutive failures                                                  | $\times \min(\eta, 0.3)$; first step: $\times 0.1$ | yes                                  | per policy                                            |
 | accepted, inside the dead band                                                                     | $\times 1$                                         | no                                   | no                                                    |
-| accepted, outside the dead band                                                                    | $\times\, \eta$                                    | RADAU5 policy: yes; PERIODIC: if due | RADAU5: unless $\theta \le 10^{-3}$; PERIODIC: if due |
+| accepted, outside the dead band                                                                    | $\times \eta$                                    | RADAU5 policy: yes; PERIODIC: if due | RADAU5: unless $\theta \le 10^{-3}$; PERIODIC: if due |
 
 *Table 8.3. Step-driver outcomes and actions; the convergence-failure rows implement D14.*
 
@@ -1563,16 +1565,16 @@ firkLsPSolve(r, z, tol, lr):                                # lr is SUN_PREC_RIG
 ```
 
 *Listing 8.4. The FIRKLS protocol. The stacked operator is the block product*
-$\mathrm{vec}(MV - h\, J V A^T)$ *for* $V = [v_1, \dots, v_s]$ *[2000VL], which a future multivector
+$\mathrm{vec}(MV - h J V A^T)$ *for* $V = [v_1, \dots, v_s]$ *[2000VL], which a future multivector
 layout could exploit.*
 
 | Solve                                     | Operator and solver                                                                     | Stopping test of the solver                                                                                        | `delta` passed                                                                                          | On non-convergence                                    |
 | ----------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Newton, $s \ge 2$                         | $I_s \otimes M - hA \otimes J$; internal SPFGMR, right preconditioned, scaling $(W, W)$ | $\lVert W \circ r \rVert_2 = \sqrt{sN}\, \lVert r \rVert_{WRMS}$ `[fact: src/sunlinsol/spfgmr/sunlinsol_spfgmr.c]` | $\epsilon_{stk}\, \epsilon_{nls}\, \sqrt{s}\; \mathrm{nrmfac}$                                          | recoverable; `SUNLS_RES_REDUCED` accepted iff $k = 1$ |
-| Newton, $s = 1$                           | $M - \gamma J$; the user's solver, scaling $(w, w)$                                     | the solver's                                                                                                       | $\epsilon_L\, \epsilon_{nls}\; \mathrm{nrmfac}$ (CVLS)                                                  | recoverable                                           |
+| Newton, $s \ge 2$                         | $I_s \otimes M - hA \otimes J$; internal SPFGMR, right preconditioned, scaling $(W, W)$ | $\lVert W \circ r \rVert_2 = \sqrt{sN} \lVert r \rVert_{WRMS}$ `[fact: src/sunlinsol/spfgmr/sunlinsol_spfgmr.c]` | $\epsilon_{stk} \epsilon_{nls} \sqrt{s}\; \mathrm{nrmfac}$                                          | recoverable; `SUNLS_RES_REDUCED` accepted iff $k = 1$ |
+| Newton, $s = 1$                           | $M - \gamma J$; the user's solver, scaling $(w, w)$                                     | the solver's                                                                                                       | $\epsilon_L \epsilon_{nls}\; \mathrm{nrmfac}$ (CVLS)                                                  | recoverable                                           |
 | error-estimate filter                     | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \min(\epsilon_{nls}, \lVert b \rVert_{WRMS})\; \mathrm{nrmfac}$; no small-residual shortcut | recoverable, then $h \times 0.25$                     |
-| preconditioner block                      | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L\, \lVert r_i \rVert_{WRMS}\; \mathrm{nrmfac}$                                               | accepted and counted                                  |
-| mass solve                                | $M$; the user's mass solver                                                             | the solver's                                                                                                       | $\epsilon_{L,M}\, \epsilon_{nls}\; \mathrm{nrmfac}$ (ARKLS)                                             | `FIRK_MASSSOLVE_FAIL`                                 |
+| preconditioner block                      | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \lVert r_i \rVert_{WRMS}\; \mathrm{nrmfac}$                                               | accepted and counted                                  |
+| mass solve                                | $M$; the user's mass solver                                                             | the solver's                                                                                                       | $\epsilon_{L,M} \epsilon_{nls}\; \mathrm{nrmfac}$ (ARKLS)                                             | `FIRK_MASSSOLVE_FAIL`                                 |
 
 *Table 8.6. Tolerance conversions. The SUNDIALS Krylov solvers test the 2-norm of the scaled
 residual, so the WRMS tolerances of Table 5.7 are multiplied by* $\mathrm{nrmfac} = \sqrt{N}$, *as
@@ -1588,7 +1590,7 @@ Further rules of the interface:
 - `jok` and `jcur`: the user's `linsys` and `psetup` receive `jok = !jbad`, and whatever they report
   in `jcur` is recorded as the currency of the Jacobian (H29).
 - Difference-quotient dense and band Jacobians follow CVLS: increments
-  $\max\Bigl(\sqrt u\, \lvert y_j \rvert, \frac{\mathrm{minInc}}{w_j}\Bigr)$ with $\mathrm{minInc} = 1000 \lvert h \rvert\, u\, N\, \lVert f \rVert_{WRMS}$ or 1, and the perturbed component is restored even when the
+  $\max\Bigl(\sqrt u \lvert y_j \rvert, \frac{\mathrm{minInc}}{w_j}\Bigr)$ with $\mathrm{minInc} = 1000 \lvert h \rvert u N \lVert f \rVert_{WRMS}$ or 1, and the perturbed component is restored even when the
   RHS reports a recoverable failure (H2). They are the only routines that read raw vector data.
 - Mass matrix: $J$ and $M$ are both matrix-based or both matrix-free (ARKLS rule); `time_dep =
   SUNTRUE` is `FIRK_ILL_INPUT` until M9; the constant $M$ is set up once in `Init` and reused (H28).
@@ -2243,9 +2245,9 @@ corresponding measurement exists.
 | Blocked claim                                                                | Protocol                                                                                                                                                                                                                                         | Gate                                          |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
 | "FGMRES needs $k_{lin}$ iterations per Newton iteration at stage count $s$"  | 2-D heat and advection–diffusion with $N = 10^4$ to $10^6$ and band, PCG and AMG block solvers; Robertson, van der Pol, Oregonator; one advection-dominated case; record mean and maximum $k_{lin}$, restarts and failures for $s = 1, \dots, 9$ | M4; $s = 3$ recorded at v0.1.0                |
-| "step counts match RADAU5 within 20%"                                        | equal effective tolerances after $0.1\, \mathrm{rtol}^{\frac{2}{3}}$, $k_1 = k_2 = 1$, the RADAU5 policy; reference sequences from `radau5.f` with the script committed                                                                          | M2                                            |
+| "step counts match RADAU5 within 20%"                                        | equal effective tolerances after $0.1 \mathrm{rtol}^{\frac{2}{3}}$, $k_1 = k_2 = 1$, the RADAU5 policy; reference sequences from `radau5.f` with the script committed                                                                          | M2                                            |
 | "estimate order $p = s$" and "order at least $s$ on stiff Prothero–Robinson" | slopes on smooth and stiff Prothero–Robinson for every $s$                                                                                                                                                                                       | M2, M4                                        |
-| the memory formula                                                           | count `N_VClone` calls against $11 + s(2\,\mathrm{maxl} + 10)$                                                                                                                                                                                   | M1                                            |
+| the memory formula                                                           | count `N_VClone` calls against $11 + s(2\mathrm{maxl} + 10)$                                                                                                                                                                                   | M1                                            |
 | "one allreduce per reduction with MPIManyVector"                             | count collectives per step for plain ManyVector and MPIManyVector over `NVECTOR_PARALLEL`; weak scaling on 2-D heat with hypre                                                                                                                   | M3                                            |
 | work–precision against CVODE BDF and ARKStep ESDIRK                          | the stiff set of [1996HW, §IV.10] plus one PDE at scale                                                                                                                                                                                          | a later performance report, not this document |
 
@@ -2503,30 +2505,30 @@ $1 \le s \le 9$. The script evaluates $R(z) = \frac{P(z)}{Q(z)}$, the $(s-1, s)$
 $e^z$, from the exact rational coefficients
 
 $$
-P(z) = \sum_{j=0}^{s-1} \frac{(2s-1-j)!\,(s-1)!}{(2s-1)!\,j!\,(s-1-j)!}\, z^j,
+P(z) = \sum_{j=0}^{s-1} \frac{(2s-1-j)!(s-1)!}{(2s-1)!j!(s-1-j)!} z^j,
 \qquad
-Q(z) = \sum_{j=0}^{s} \frac{(2s-1-j)!\,s!}{(2s-1)!\,j!\,(s-j)!}\, (-z)^j,
+Q(z) = \sum_{j=0}^{s} \frac{(2s-1-j)!s!}{(2s-1)!j!(s-j)!} (-z)^j,
 $$
 
-and checks in 50-digit arithmetic that it agrees with $R(z) = 1 + z\, b^T (I - zA)^{-1} \mathbf{1}$
+and checks in 50-digit arithmetic that it agrees with $R(z) = 1 + z b^T (I - zA)^{-1} \mathbf{1}$
 for the tables of the generator `scripts/firkode_radau_tables.py`, the reference for the C tables,
 to $10^{-30}$ at four sample points; the script therefore requires the generator of Milestone M0. The
 poles of $R$ are the eigenvalues of $A^{-1}$, and $\gamma_0$ follows the rule of Section 4.5; the
 printed values are the literals of `firkode_tables.c` to all printed digits. For the Dahlquist
 equation $\dot y = \lambda y$ with $z = h\lambda$, the stage increments are
-$Z = \bigl((I - zA)^{-1} - I\bigr) \mathbf{1}\, y_n$, and the filtered estimate of Section 4.6 is
+$Z = \bigl((I - zA)^{-1} - I\bigr) \mathbf{1} y_n$, and the filtered estimate of Section 4.6 is
 
 $$
 \frac{\mathrm{err}}{y_n}
 = \frac{\gamma_0 z + e^T \bigl((I - zA)^{-1} - I\bigr) \mathbf{1}}{1 - \gamma_0 z},
 \qquad
-e^T = (\hat b - b)^T A^{-1} = -\gamma_0\, l(0)^T A^{-1},
+e^T = (\hat b - b)^T A^{-1} = -\gamma_0 l(0)^T A^{-1},
 $$
 
 with $l_i(0)$ the Lagrange basis on the nodes $c$ evaluated at $0$. It is $O(z^{s+1})$ as $z \to 0$ and
 tends to $-1$ as $|z| \to \infty$. Its numerator cancels $O(z)$ terms down to $O(z^{s+1})$, so it is
 evaluated with `mpmath`. The order stars are evaluated in double precision except on the disk
-$|z| < 2\,\left(\frac{u}{C_s}\right)^{\frac{1}{2s}}$, with $C_s = \frac{(s-1)!\, s!}{(2s-1)!\,(2s)!}$ the Padé error constant,
+$|z| < 2\left(\frac{u}{C_s}\right)^{\frac{1}{2s}}$, with $C_s = \frac{(s-1)! s!}{(2s-1)!(2s)!}$ the Padé error constant,
 $e^z - R(z) = C_s z^{2s} + \dots$, where double precision cannot separate $|R(z)|$ from $|e^z|$; those
 grid points are recomputed with `mpmath` (radius $3.6$ for $s = 9$).
 
@@ -2547,8 +2549,8 @@ $0.01$ for every $s$.
 
 *Figure 1. The curves* $|R(z)| = 1$ *for* $s = 1, \dots, 9$. *Each method is stable outside its
 curve, so every stability region contains the closed left half-plane. The bounded shaded sets*
-$|R(z)| > 1$ *lie in* $\mathrm{Re}\, z > 0$ *and grow with* $s$; *for* $s = 9$ *the set reaches*
-$\mathrm{Re}\, z = 75.1$ *and* $\lvert \mathrm{Im}\, z \rvert = 43.6$.
+$|R(z)| > 1$ *lie in* $\mathrm{Re} z > 0$ *and grow with* $s$; *for* $s = 9$ *the set reaches*
+$\mathrm{Re} z = 75.1$ *and* $\lvert \mathrm{Im} z \rvert = 43.6$.
 
 ![Order stars of the Radau IIA methods](../../doc/shared/figs/firkode/RADAU_IIA_order_star.png)
 
@@ -2570,7 +2572,7 @@ exist for even* $s$ *only.*
 *Figure 4. The filtered error estimate* $\left|\frac{\mathrm{err}}{y_n}\right|$ *for*
 $\dot y = \lambda y$ *along the negative real axis (left) and the imaginary axis (right). The
 slopes for small* $z$ *are* $s + 1$, *the estimate having order* $p = s$. *As* $|z| \to \infty$ *the
-estimate tends to* $-y_n$ *instead of growing like* $\gamma_0 z\, y_n$, *which the unfiltered
+estimate tends to* $-y_n$ *instead of growing like* $\gamma_0 z y_n$, *which the unfiltered
 estimate (dashed,* $s = 3$) *does.*
 
 ## Appendix B: computation of Table 4.1
@@ -2582,7 +2584,7 @@ and which needs only exact rational arithmetic and a root finder.
    denominator $Q(z)$ of Appendix A `[proved]`. They are found as the roots of $Q$ (Durand–Kerner
    iteration or any polynomial root finder); the eigenvalues of $A$ are $\mu_j = \frac{1}{\lambda_j}$.
 2. $\gamma_0 = \frac{1}{\lambda_r}$ for odd $s$, with $\lambda_r$ the unique real root; for even $s$,
-   $\gamma_0 = \frac{1}{\mathrm{Re}\, \lambda_\ast}$ with $\lambda_\ast$ the root of smallest modulus
+   $\gamma_0 = \frac{1}{\mathrm{Re} \lambda_\ast}$ with $\lambda_\ast$ the root of smallest modulus
    (Section 4.5).
 3. The spectrum of $K P^{-1}$ on the model problem is the union of the disks $D_j$, the images of the
    closed left half-plane under $w_j(z) = \frac{1 - z\mu_j}{1 - \gamma_0 z}$. By the maximum principle
