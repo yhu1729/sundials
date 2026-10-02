@@ -557,7 +557,7 @@ FIRKODE calls `SUNAdaptController_EstimateStep(C, h, p, dsm, &hnew)` with $p = s
 estimate, and applies RADAU5's heuristics to the proposal afterwards, because the controller interface
 has no hook for them:
 
-- the safety factor $\kappa = 0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$, with $k_{nls}$ the
+- the safety factor $\kappa = 0.9 \min\Bigl(1, \frac{1 + 2m}{k_{\text{nls}} + 2m}\Bigr)$, with $k_{\text{nls}}$ the
   Newton iterations of the step, so that a step that needed many iterations grows less;
 - in BEGINNER mode the smaller of the controller's proposal and the I-controller's
   $\kappa h_n \mathrm{dsm}^{-\frac{1}{s+1}}$, which is RADAU5's `QUOT = MAX(QUOT, FACGUS)`;
@@ -627,14 +627,14 @@ preconditioned mode and are excluded.
 Signals, recorded per accepted step:
 
 - the Newton rate $\theta$ and its filtered value $\tilde\theta \leftarrow \min\Bigl(10, \max\bigl(\theta, \frac{\tilde\theta}{2}\bigr)\Bigr)$;
-- the Newton count $k_{nls}$ and the FGMRES count per Newton iteration $k_{lin}$;
+- the Newton count $k_{\text{nls}}$ and the FGMRES count per Newton iteration $k_{lin}$;
 - the step ratio $\eta = \frac{h_{n+1}}{h_n}$ proposed by the controller;
 - two flags: a Newton failure that reduced the step, and an unexpected rejection (singular
   $M - \gamma J$ or divergence).
 
 Rule, evaluated whenever $M - \gamma J$ is refactored and at the latest after 10 kept steps:
 
-- $s \to s + 2$ if $k_{nls} > 1$, $\tilde\theta \le 0.002$, $0.8 < \eta < 1.2$, and (FIRKODE only)
+- $s \to s + 2$ if $k_{\text{nls}} > 1$, $\tilde\theta \le 0.002$, $0.8 < \eta < 1.2$, and (FIRKODE only)
   $k_{lin} \le 2s$: the block preconditioner degrades with $s$ (Table 4.1), so slow stage solves veto
   a raise. No raise within 10 steps of the last change.
 - $s \to s - 2$ if $\tilde\theta \ge 0.8$, or either flag is set.
@@ -642,7 +642,7 @@ Rule, evaluated whenever $M - \gamma J$ is refactored and at the latest after 10
 The work per unit step,
 
 $$
-W(s) = \frac{k_{nls}\bigl[ s C_f + k_{lin} s (C_{sol} + C_{Jv}) \bigr]}{h},
+W(s) = \frac{k_{\text{nls}}\bigl[ s C_f + k_{lin} s (C_{sol} + C_{Jv}) \bigr]}{h},
 $$
 
 with $C_f$, $C_{sol}$, $C_{Jv}$ the running average wall-clock costs of one RHS evaluation, block solve
@@ -870,16 +870,16 @@ Revisit when GPU launch overhead is measured to dominate, in favor of a contiguo
 RADAU5's step control is Gustafsson's predictive controller with safety, limits and a dead
 band woven into one routine. SUNDIALS separates the controller from the clamps.
 
-| Element                                | RADAU5                                                      | `SUNAdaptController_ImpGus` `[fact: src/sunadaptcontroller/soderlind/sunadaptcontroller_soderlind.c]` | FIRKODE                                                                                    |
-| -------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| exponents                              | $\frac{1}{4}$ on both errors, $s = 3$                       | $k_1 = 0.98$, $k_2 = 0.95$ by default, with `ord` $= p + 1$                                           | $k_1 = k_2 = 1$ with $p = s$ in BEGINNER mode                                              |
-| minimum with the I-controller proposal | yes                                                         | no                                                                                                    | applied by FIRKODE in BEGINNER mode                                                        |
-| floor on the stored error              | $\max(10^{-2}, \mathrm{dsm})$ for the history               | none                                                                                                  | `dsm` floored at $10^{-10}$ before the call; the $10^{-2}$ history floor is not reproduced |
-| first steps                            | I-controller until history exists                           | I-controller until history exists                                                                     | same                                                                                       |
-| safety factor                          | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$ inside | none                                                                                                  | applied to the proposal                                                                    |
-| ratio limits, dead band                | inside                                                      | none                                                                                                  | applied to the proposal                                                                    |
-| history update                         | on accepted steps                                           | `UpdateH` on accepted steps only                                                                      | same                                                                                       |
-| `dsm = 0`                              | floored                                                     | `pow(0, negative)` is infinite                                                                        | floored                                                                                    |
+| Element                                | RADAU5                                                             | `SUNAdaptController_ImpGus` `[fact: src/sunadaptcontroller/soderlind/sunadaptcontroller_soderlind.c]` | FIRKODE                                                                                    |
+| -------------------------------------- | -----------------------------------------------------------        | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| exponents                              | $\frac{1}{4}$ on both errors, $s = 3$                              | $k_1 = 0.98$, $k_2 = 0.95$ by default, with `ord` $= p + 1$                                           | $k_1 = k_2 = 1$ with $p = s$ in BEGINNER mode                                              |
+| minimum with the I-controller proposal | yes                                                                | no                                                                                                    | applied by FIRKODE in BEGINNER mode                                                        |
+| floor on the stored error              | $\max(10^{-2}, \mathrm{dsm})$ for the history                      | none                                                                                                  | `dsm` floored at $10^{-10}$ before the call; the $10^{-2}$ history floor is not reproduced |
+| first steps                            | I-controller until history exists                                  | I-controller until history exists                                                                     | same                                                                                       |
+| safety factor                          | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{\text{nls}} + 2m}\Bigr)$ inside | none                                                                                                  | applied to the proposal                                                                    |
+| ratio limits, dead band                | inside                                                             | none                                                                                                  | applied to the proposal                                                                    |
+| history update                         | on accepted steps                                                  | `UpdateH` on accepted steps only                                                                      | same                                                                                       |
+| `dsm = 0`                              | floored                                                            | `pow(0, negative)` is infinite                                                                        | floored                                                                                    |
 
 *Table 5.6. RADAU5's controller against the SUNDIALS implementation.*
 
@@ -955,7 +955,7 @@ would violate P2.
 #### Reasons
 
 1. RADAU's precedent for variable order, and CVODE's within SUNDIALS.
-2. The cost signals exist anyway ($\theta$, $k_{nls}$, $k_{lin}$).
+2. The cost signals exist anyway ($\theta$, $k_{\text{nls}}$, $k_{lin}$).
 3. The degradation of the preconditioner with $s$ makes a veto necessary (P4).
 
 #### Cost
@@ -1015,7 +1015,7 @@ for many steps. The right choice depends on the cost of a setup relative to a Ne
 #### Verdict
 
 A reuse policy decides, at the start of each step attempt, whether to re-evaluate $J$
-and whether to refactor $M - \gamma J$. It sees $\theta$, $k_{nls}$, $k_{lin}$, dsm, $\eta$,
+and whether to refactor $M - \gamma J$. It sees $\theta$, $k_{\text{nls}}$, $k_{lin}$, dsm, $\eta$,
 $\frac{\Delta\gamma}{\gamma}$, the steps since the last $J$ and setup, and the failure flags. FIRKLS
 executes the decision; it does not make it.
 
@@ -1101,7 +1101,7 @@ measures iteration counts.
 | stages                                             | v0.1.0: $s = 3$; v0.2 EXPERT: any $1 \le s \le 9$, default 3; v0.3 BEGINNER: in situ, $3 \le s \le 7$                             |
 | $\epsilon_{\text{nls}}$, $m$, divergence threshold | 0.1, 7, 0.99                                                                                                                      |
 | rate estimate, first-iteration exponent            | geometric mean of the last two ratios, 0.8                                                                                        |
-| safety                                             | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$                                                                              |
+| safety                                             | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{\text{nls}} + 2m}\Bigr)$                                                                       |
 | step ratio limits                                  | $[0.2, 8]$; $10^4$ on the first step; 0.1 when the first step is rejected; 0.3 after 2 error failures; 0.5 after a divergence     |
 | dead band                                          | $[1, 1.2]$ when $\theta \le 10^{-3}$                                                                                              |
 | dsm floor                                          | $10^{-10}$                                                                                                                        |
@@ -1192,25 +1192,25 @@ the dead band with* $\theta \le 10^{-3}$ *and the Jacobian policy, is adopted in
 
 Table 7.1 counts the work of one step in units that the user controls: RHS evaluations, block solves
 with $M - \gamma J$, products with $J$ and $M$, setups, and vectors of length $N$ stored. The FIRKODE
-entries are `[derived]` from the algorithms of Chapter 4; $k_{nls}$ Newton iterations and $k_{lin}$
+entries are `[derived]` from the algorithms of Chapter 4; $k_{\text{nls}}$ Newton iterations and $k_{lin}$
 FGMRES iterations per Newton iteration are parameters until measured.
 
-| Quantity per step                       | FIRKODE, $s$ stages                                                                                                              | CVODE BDF                          | ARKStep ESDIRK, $s_D$ implicit stages        | RADAU5, $s = 3$                                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| RHS evaluations                         | $s k_{nls} + 1$ (+1 with refilter)                                                                                             | $k_{nls} + 1$                      | $\approx s_D k_{nls} + 1$                  | $3 k_{nls} + 1$ (+1 with refilter)                                                  |
-| block solves with $M - \gamma J$        | $s k_{lin} k_{nls} + 1$ (+1 with refilter)                                                                                     | $k_{nls}$                          | $s_D k_{nls}$                              | $k_{nls}$ real and $k_{nls}$ complex (about $5 k_{nls}$ real-solve equivalents) + 1 |
-| products $J v$                          | $s k_{lin} k_{nls}$ (or RHS evaluations with difference quotients)                                                             | 0                                  | 0                                            | 0                                                                                   |
-| products $M v$ ($M \ne I$)              | $s k_{nls} (1 + k_{lin})$ + 1                                                                                                  | not applicable                     | $s_D k_{nls}$                                | folded into the transformation                                                      |
-| setups                                  | 1 real factorization of $M - \gamma J$ per setup                                                                                 | 1 per setup                        | 1 per setup                                  | 1 real + 1 complex factorization (about 5 real LU equivalents) per setup            |
-| vectors of length $N$ stored            | $11 + s(2\mathrm{maxl} + 10)$: 95 for $s = 3$, $\mathrm{maxl} = 9$                                                             | $q + 1$ Nordsieck + about 10       | $s_D$ stage RHS + about 10                   | about 12 plus the dense work array $4N^2$                                           |
-| global reductions per Krylov iteration  | $j + 2$ dot products at Arnoldi step $j$, each one allreduce with MPIManyVector, $s$ with a plain ManyVector over MPI subvectors | solver's                           | solver's                                     | none (direct)                                                                       |
+| Quantity per step                       | FIRKODE, $s$ stages                                                                                                              | CVODE BDF                          | ARKStep ESDIRK, $s_D$ implicit stages        | RADAU5, $s = 3$                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------- | -----------------------------------------------------------------------------------                      |
+| RHS evaluations                         | $s k_{\text{nls}} + 1$ (+1 with refilter)                                                                                        | $k_{\text{nls}} + 1$               | $\approx s_D k_{\text{nls}} + 1$             | $3 k_{\text{nls}} + 1$ (+1 with refilter)                                                                |
+| block solves with $M - \gamma J$        | $s k_{lin} k_{\text{nls}} + 1$ (+1 with refilter)                                                                                | $k_{\text{nls}}$                   | $s_D k_{\text{nls}}$                         | $k_{\text{nls}}$ real and $k_{\text{nls}}$ complex (about $5 k_{\text{nls}}$ real-solve equivalents) + 1 |
+| products $J v$                          | $s k_{lin} k_{\text{nls}}$ (or RHS evaluations with difference quotients)                                                        | 0                                  | 0                                            | 0                                                                                                        |
+| products $M v$ ($M \ne I$)              | $s k_{\text{nls}} (1 + k_{lin})$ + 1                                                                                             | not applicable                     | $s_D k_{\text{nls}}$                         | folded into the transformation                                                                           |
+| setups                                  | 1 real factorization of $M - \gamma J$ per setup                                                                                 | 1 per setup                        | 1 per setup                                  | 1 real + 1 complex factorization (about 5 real LU equivalents) per setup                                 |
+| vectors of length $N$ stored            | $11 + s(2\mathrm{maxl} + 10)$: 95 for $s = 3$, $\mathrm{maxl} = 9$                                                               | $q + 1$ Nordsieck + about 10       | $s_D$ stage RHS + about 10                   | about 12 plus the dense work array $4N^2$                                                                |
+| global reductions per Krylov iteration  | $j + 2$ dot products at Arnoldi step $j$, each one allreduce with MPIManyVector, $s$ with a plain ManyVector over MPI subvectors | solver's                           | solver's                                     | none (direct)                                                                                            |
 
 *Table 7.1. Work per step. The complex-arithmetic equivalents count a complex multiply-add as four
 real ones.*
 
 The break-even against RADAU5's dense path follows from flop counts `[derived]`: with a dense LU at
 $\frac{2}{3} N^3$ flops, a triangular solve pair and a dense matrix-vector product at $2N^2$ each,
-$s = 3$ and $k_{nls} = 2$:
+$s = 3$ and $k_{\text{nls}} = 2$:
 
 | Setup frequency        | FIRKODE cheaper in flops when         | $k_{lin} = 4$   | $k_{lin} = 12$ (bound of Table 4.1)    |
 | ---------------------- | ------------------------------------- | --------------- | -------------------------------------- |
@@ -1870,7 +1870,7 @@ negative unrecoverable.*
 | `FIRKodeSpectralRadiusFn`                            | `int (t, y, fy, sunrealtype* rho_ptr, void* user_data)`                                                                                                                                                                                                                                          | the dominant-eigenvalue estimator               |
 
 *Table 9.3. Hook typedefs of v0.4. `FIRKodeStepRecord` is the public per-step record of Section
-4.11* ($\theta$, $k_{nls}$, $k_{lin}$, *dsm,* $\eta$, $\frac{\Delta\gamma}{\gamma}$, *steps since
+4.11* ($\theta$, $k_{\text{nls}}$, $k_{lin}$, *dsm,* $\eta$, $\frac{\Delta\gamma}{\gamma}$, *steps since
 the last* $J$ *and setup, failure flags). The default path must be bit-identical when a hook is
 unset.*
 
