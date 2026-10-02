@@ -1,4 +1,4 @@
-# FIRKODE v0.1.0 Design Document (October 1, 2026)
+# FIRKODE v0.1.0 Design Document (October 2, 2026)
 
 FIRKODE is a proposed SUNDIALS package for stiff initial value problems
 
@@ -13,7 +13,7 @@ the SUNDIALS developers and collaborators who decide whether the package belongs
 8–11). The user guide is a deliverable of the milestones and is not duplicated here.
 
 Status: a draft proposal based on SUNDIALS 7.9.0. The only pre-existing material is the supporting
-tooling named in Appendix A (four stability figures and the script that draws them) and a Lean 4
+tooling named in Appendix A (four stability figures and the script that draws them) and a Lean
 pilot in `verification/lean`, cited only as evidence that the certification approach of
 Milestone M7 is feasible.
 
@@ -41,9 +41,9 @@ expert users.
 ### 1.1 What is new relative to RADAU5
 
 RADAU5 transforms the $sN \times sN$ Newton
-matrix to block-diagonal form and factors one real and $\lfloor \frac{s}{2} \rfloor$ complex $N \times N$
+matrix to block-diagonal form and factors one real and $\left\lfloor \frac{s}{2} \right\rfloor$ complex $N \times N$
 matrices. FIRKODE instead solves the stacked Newton system with flexible GMRES [1993S],
-right-preconditioned by $I_s \otimes (M - h\gamma_0 J)$, where $\gamma_0$ is the reciprocal of the
+right-preconditioned by $I_s \otimes \left(M - h\gamma_0 J \right)$, where $\gamma_0$ is the reciprocal of the
 real eigenvalue of $A^{-1}$. The preconditioner needs one real factorization per setup and is applied
 by $s$ independent solves with the user's ordinary $N \times N$ `SUNLinearSolver`. Every linear
 solver and preconditioner written for CVODE's or ARKODE's $M - \gamma J$ therefore works unchanged,
