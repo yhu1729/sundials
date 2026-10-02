@@ -418,16 +418,16 @@ If $\theta_k \ge 0.99$ the solve fails and the step is halved.
 
 #### Predicted failure
 
-If $\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert > \epsilon_{nls}$,
+If $\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert > \epsilon_{\text{nls}}$,
 convergence is not expected within the remaining iterations; the solve fails and the step is
 multiplied by $0.8 q^{-\frac{1}{4 + m - 1 - k}}$ with
-$q = \mathrm{clamp}\Bigl(\frac{\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert}{\epsilon_{nls}},\ 10^{-4},\ 20\Bigr)$.
+$q = \mathrm{clamp}\Bigl(\frac{\eta_k \theta_k^{m-1-k} \lVert \delta^{(k)} \rVert}{\epsilon_{\text{nls}}},\ 10^{-4},\ 20\Bigr)$.
 The exponent $m - 1 - k$ is RADAU5's; it predicts at the second-to-last iteration.
 
 #### Stop
 
 The update is applied, and the iteration stops when
-$\eta_k \lVert \delta^{(k)} \rVert \le \epsilon_{nls}$, default $\epsilon_{nls} = 0.1$.
+$\eta_k \lVert \delta^{(k)} \rVert \le \epsilon_{\text{nls}}$, default $\epsilon_{\text{nls}} = 0.1$.
 
 #### Exhaustion
 
@@ -1051,16 +1051,16 @@ A block solve gets its tolerance from its purpose. $\epsilon_L$ is set by `FIRKo
 default 0.05. Tolerances are stated in the WRMS norm; Table 8.6 gives the conversion to the 2-norm
 stopping tests of the SUNDIALS Krylov solvers.
 
-| Purpose                                                    | Tolerance (WRMS)                                                                                                      | On non-convergence                       |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Newton system, $s = 1$                                     | $\epsilon_L \epsilon_{nls}$, as in CVODE                                                                              | recoverable failure                      |
-| error estimate                                             | $\epsilon_L \min(\epsilon_{nls}, \lVert b \rVert)$, so that a small estimate is resolved rather than returned as zero | recoverable failure                      |
-| preconditioner application                                 | $\epsilon_L \lVert b \rVert$, relative, since $b$ is a Krylov vector of arbitrary scale                               | accepted; FGMRES absorbs it              |
-| mass solve ($\dot y$ for the initial step and rootfinding) | $\epsilon_{L,M} \epsilon_{nls}$, as in ARKLS                                                                          | `FIRK_MASSSOLVE_FAIL`                    |
+| Purpose                                                    | Tolerance (WRMS)                                                                                                             | On non-convergence                       |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------        | ---------------------------------------- |
+| Newton system, $s = 1$                                     | $\epsilon_L \epsilon_{\text{nls}}$, as in CVODE                                                                              | recoverable failure                      |
+| error estimate                                             | $\epsilon_L \min(\epsilon_{\text{nls}}, \lVert b \rVert)$, so that a small estimate is resolved rather than returned as zero | recoverable failure                      |
+| preconditioner application                                 | $\epsilon_L \lVert b \rVert$, relative, since $b$ is a Krylov vector of arbitrary scale                                      | accepted; FGMRES absorbs it              |
+| mass solve ($\dot y$ for the initial step and rootfinding) | $\epsilon_{L,M} \epsilon_{\text{nls}}$, as in ARKLS                                                                          | `FIRK_MASSSOLVE_FAIL`                    |
 
 *Table 5.7. Tolerances of the inner solves.*
 
-The stacked FGMRES stops when the residual norm falls below $\epsilon_{stk} \epsilon_{nls}$, default
+The stacked FGMRES stops when the residual norm falls below $\epsilon_{stk} \epsilon_{\text{nls}}$, default
 $\epsilon_{stk} = 0.05$. With right preconditioning this is the true residual. Krylov dimension
 $\max(5, 3s)$, one restart, modified Gram–Schmidt; these defaults are provisional until Milestone M4
 measures iteration counts.
@@ -1095,23 +1095,23 @@ measures iteration counts.
 
 ### 5.13 Defaults
 
-| Parameter                                   | Default                                                                                                                           |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| mode                                        | BEGINNER                                                                                                                          |
-| stages                                      | v0.1.0: $s = 3$; v0.2 EXPERT: any $1 \le s \le 9$, default 3; v0.3 BEGINNER: in situ, $3 \le s \le 7$                             |
-| $\epsilon_{nls}$, $m$, divergence threshold | 0.1, 7, 0.99                                                                                                                      |
-| rate estimate, first-iteration exponent     | geometric mean of the last two ratios, 0.8                                                                                        |
-| safety                                      | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$                                                                              |
-| step ratio limits                           | $[0.2, 8]$; $10^4$ on the first step; 0.1 when the first step is rejected; 0.3 after 2 error failures; 0.5 after a divergence     |
-| dead band                                   | $[1, 1.2]$ when $\theta \le 10^{-3}$                                                                                              |
-| dsm floor                                   | $10^{-10}$                                                                                                                        |
-| controller                                  | `SUNAdaptController_ImpGus`, $k_1 = k_2 = 1$, with the I-controller minimum                                                       |
-| reuse policy                                | `RADAU5`; `PERIODIC` uses 20 steps or $\Delta\gamma > 0.3$ for the setup and 51 steps for $J$                                     |
-| $\epsilon_L$, $\epsilon_{stk}$              | 0.05, 0.05                                                                                                                        |
-| FGMRES                                      | $\mathrm{maxl} = \max(5, 3s)$, one restart, modified Gram–Schmidt                                                                 |
-| refilter, predictor                         | on, extrapolation                                                                                                                 |
-| failure limits                              | 7 error-test failures, 10 convergence failures, 500 steps per `Evolve`, 10 warnings for $t + h = t$                               |
-| order rule (v0.3)                           | raise at $\tilde\theta \le 0.002$, lower at $\tilde\theta \ge 0.8$, window $0.8 < \eta < 1.2$, hold 10 steps, veto $k_{lin} > 2s$ |
+| Parameter                                          | Default                                                                                                                           |
+| -------------------------------------------        | --------------------------------------------------------------------------------------------------------------------------------- |
+| mode                                               | BEGINNER                                                                                                                          |
+| stages                                             | v0.1.0: $s = 3$; v0.2 EXPERT: any $1 \le s \le 9$, default 3; v0.3 BEGINNER: in situ, $3 \le s \le 7$                             |
+| $\epsilon_{\text{nls}}$, $m$, divergence threshold | 0.1, 7, 0.99                                                                                                                      |
+| rate estimate, first-iteration exponent            | geometric mean of the last two ratios, 0.8                                                                                        |
+| safety                                             | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{nls} + 2m}\Bigr)$                                                                              |
+| step ratio limits                                  | $[0.2, 8]$; $10^4$ on the first step; 0.1 when the first step is rejected; 0.3 after 2 error failures; 0.5 after a divergence     |
+| dead band                                          | $[1, 1.2]$ when $\theta \le 10^{-3}$                                                                                              |
+| dsm floor                                          | $10^{-10}$                                                                                                                        |
+| controller                                         | `SUNAdaptController_ImpGus`, $k_1 = k_2 = 1$, with the I-controller minimum                                                       |
+| reuse policy                                       | `RADAU5`; `PERIODIC` uses 20 steps or $\Delta\gamma > 0.3$ for the setup and 51 steps for $J$                                     |
+| $\epsilon_L$, $\epsilon_{stk}$                     | 0.05, 0.05                                                                                                                        |
+| FGMRES                                             | $\mathrm{maxl} = \max(5, 3s)$, one restart, modified Gram–Schmidt                                                                 |
+| refilter, predictor                                | on, extrapolation                                                                                                                 |
+| failure limits                                     | 7 error-test failures, 10 convergence failures, 500 steps per `Evolve`, 10 warnings for $t + h = t$                               |
+| order rule (v0.3)                                  | raise at $\tilde\theta \le 0.002$, lower at $\tilde\theta \ge 0.8$, window $0.8 < \eta < 1.2$, hold 10 steps, veto $k_{lin} > 2s$ |
 
 *Table 5.9. Default parameters.*
 
@@ -1159,10 +1159,10 @@ counts or make nominally equal runs different accuracy requests.
 
 | Element                  | RADAU5                                                                                             | FIRKODE                                                  | Effect on comparisons                                                                                  |
 | ------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| tolerances               | replaces $\mathrm{rtol}$ by $0.1 \mathrm{rtol}^{\frac{2}{3}}$ and scales $\mathrm{atol}$ with it | uses the tolerances as given, as CVODE does              | equal nominal tolerances are different accuracy requests; the comparison harness of M2 transforms them |
-| Newton tolerance         | $\max\Bigl(\frac{10u}{\mathrm{rtol}'}, \min(0.03, \sqrt{\mathrm{rtol}'})\Bigr)$                    | fixed $\epsilon_{nls} = 0.1$; EXPERT can set it          | Newton counts differ at loose tolerances                                                               |
+| tolerances               | replaces $\mathrm{rtol}$ by $0.1 \mathrm{rtol}^{\frac{2}{3}}$ and scales $\mathrm{atol}$ with it   | uses the tolerances as given, as CVODE does              | equal nominal tolerances are different accuracy requests; the comparison harness of M2 transforms them |
+| Newton tolerance         | $\max\Bigl(\frac{10u}{\mathrm{rtol}'}, \min(0.03, \sqrt{\mathrm{rtol}'})\Bigr)$                    | fixed $\epsilon_{\text{nls}} = 0.1$; EXPERT can set it   | Newton counts differ at loose tolerances                                                               |
 | initial step             | fixed default $10^{-6}$                                                                            | CVODE's heuristic (Section 4.8)                          | the first steps differ                                                                                 |
-| stage solve              | exact, complex LU                                                                                  | inexact FGMRES to $\epsilon_{stk} \epsilon_{nls}$        | Newton counts may differ by the inexactness; see [2000J]                                               |
+| stage solve              | exact, complex LU                                                                                  | inexact FGMRES to $\epsilon_{stk} \epsilon_{\text{nls}}$ | Newton counts may differ by the inexactness; see [2000J]                                               |
 | controller history floor | stored error floored at $10^{-2}$                                                                  | not floored                                              | second-order effect on the predictive controller                                                       |
 | error-test failures      | I-controller with safety                                                                           | same, plus the factor 0.3 after two consecutive failures | rare                                                                                                   |
 | norm                     | RMS with scale $\mathrm{atol} + \mathrm{rtol} \lvert y_n \rvert$                                   | WRMS with the same weights                               | identical                                                                                              |
@@ -1568,13 +1568,13 @@ firkLsPSolve(r, z, tol, lr):                                # lr is SUN_PREC_RIG
 $\mathrm{vec}(MV - h J V A^T)$ *for* $V = [v_1, \dots, v_s]$ *[2000VL], which a future multivector
 layout could exploit.*
 
-| Solve                                     | Operator and solver                                                                     | Stopping test of the solver                                                                                        | `delta` passed                                                                                          | On non-convergence                                    |
-| ----------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Newton, $s \ge 2$                         | $I_s \otimes M - hA \otimes J$; internal SPFGMR, right preconditioned, scaling $(W, W)$ | $\lVert W \circ r \rVert_2 = \sqrt{sN} \lVert r \rVert_{WRMS}$ `[fact: src/sunlinsol/spfgmr/sunlinsol_spfgmr.c]` | $\epsilon_{stk} \epsilon_{nls} \sqrt{s}\; \mathrm{nrmfac}$                                          | recoverable; `SUNLS_RES_REDUCED` accepted iff $k = 1$ |
-| Newton, $s = 1$                           | $M - \gamma J$; the user's solver, scaling $(w, w)$                                     | the solver's                                                                                                       | $\epsilon_L \epsilon_{nls}\; \mathrm{nrmfac}$ (CVLS)                                                  | recoverable                                           |
-| error-estimate filter                     | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \min(\epsilon_{nls}, \lVert b \rVert_{WRMS})\; \mathrm{nrmfac}$; no small-residual shortcut | recoverable, then $h \times 0.25$                     |
-| preconditioner block                      | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \lVert r_i \rVert_{WRMS}\; \mathrm{nrmfac}$                                               | accepted and counted                                  |
-| mass solve                                | $M$; the user's mass solver                                                             | the solver's                                                                                                       | $\epsilon_{L,M} \epsilon_{nls}\; \mathrm{nrmfac}$ (ARKLS)                                             | `FIRK_MASSSOLVE_FAIL`                                 |
+| Solve                                     | Operator and solver                                                                     | Stopping test of the solver                                                                                        | `delta` passed                                                                                                 | On non-convergence                                    |
+| ----------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------        | ----------------------------------------------------- |
+| Newton, $s \ge 2$                         | $I_s \otimes M - hA \otimes J$; internal SPFGMR, right preconditioned, scaling $(W, W)$ | $\lVert W \circ r \rVert_2 = \sqrt{sN} \lVert r \rVert_{WRMS}$ `[fact: src/sunlinsol/spfgmr/sunlinsol_spfgmr.c]`   | $\epsilon_{stk} \epsilon_{\text{nls}} \sqrt{s}\; \mathrm{nrmfac}$                                              | recoverable; `SUNLS_RES_REDUCED` accepted iff $k = 1$ |
+| Newton, $s = 1$                           | $M - \gamma J$; the user's solver, scaling $(w, w)$                                     | the solver's                                                                                                       | $\epsilon_L \epsilon_{\text{nls}}\; \mathrm{nrmfac}$ (CVLS)                                                    | recoverable                                           |
+| error-estimate filter                     | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \min(\epsilon_{\text{nls}}, \lVert b \rVert_{WRMS})\; \mathrm{nrmfac}$; no small-residual shortcut | recoverable, then $h \times 0.25$                     |
+| preconditioner block                      | $M - \gamma J$; the user's solver                                                       | the solver's                                                                                                       | $\epsilon_L \lVert r_i \rVert_{WRMS}\; \mathrm{nrmfac}$                                                        | accepted and counted                                  |
+| mass solve                                | $M$; the user's mass solver                                                             | the solver's                                                                                                       | $\epsilon_{L,M} \epsilon_{\text{nls}}\; \mathrm{nrmfac}$ (ARKLS)                                               | `FIRK_MASSSOLVE_FAIL`                                 |
 
 *Table 8.6. Tolerance conversions. The SUNDIALS Krylov solvers test the 2-norm of the scaled
 residual, so the WRMS tolerances of Table 5.7 are multiplied by* $\mathrm{nrmfac} = \sqrt{N}$, *as
