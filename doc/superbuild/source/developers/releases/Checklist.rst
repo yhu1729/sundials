@@ -77,9 +77,9 @@ web pages.
       git pull # develop should be up to date with origin/develop now
       git checkout -b release/vX.Y.Z
 
-#. Update version numbers in ``scripts/updateVerson.sh``.
+#. Update version numbers in ``scripts/updateVersion.sh``.
 
-#. Run the ``updateVerson.sh`` script.
+#. Run the ``updateVersion.sh`` script.
 
    .. code-block:: shell
 

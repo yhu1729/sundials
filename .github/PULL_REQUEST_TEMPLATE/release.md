@@ -10,7 +10,7 @@ This is a list of tasks that need to be done before a SUNDIALS release.
 
 - [ ] Update the "Changes in ..." sections in all user guides. The changes should be sorted so that major new features are above bug fixes.
 
-- [ ] Update version numbers and release date information using the `updateVerson.sh` script. This will update the following files:
+- [ ] Update version numbers and release date information using the `updateVersion.sh` script. This will update the following files:
 
    * `CITATIONS.md`
    * `CHANGELOG.md`
