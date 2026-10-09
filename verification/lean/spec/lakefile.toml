@@ -1,0 +1,22 @@
+name = "firkode_spec"
+version = "0.1.0"
+defaultTargets = ["FirkodeSpec"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+pp.unicode.fun = true
+maxSynthPendingDepth = 3
+
+[[require]]
+name = "firkode_cert"
+path = "../cert"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "4efb186f102ebfd2eea1545c151d6fbcfdff0e43"
+
+[[lean_lib]]
+name = "FirkodeSpec"

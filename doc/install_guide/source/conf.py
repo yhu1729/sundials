@@ -123,6 +123,7 @@ rst_epilog = """
 .. |IDA_VERSION| replace:: {ida_version}
 .. |IDAS_VERSION| replace:: {idas_version}
 .. |KINSOL_VERSION| replace:: {kinsol_version}
+.. |FIRKODE_VERSION| replace:: {firkode_version}
 .. |SUNDIALS_VERSION| replace:: {sundials_version}
 """.format(
     year=year,
@@ -132,6 +133,7 @@ rst_epilog = """
     ida_version=ida_version,
     idas_version=idas_version,
     kinsol_version=kinsol_version,
+    firkode_version=firkode_version,
     sundials_version=sundials_version,
 )
 

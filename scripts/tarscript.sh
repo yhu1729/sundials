@@ -41,7 +41,7 @@ function print_usage
     echo "   -h       : help"
     echo "   -s       : short (no documentation)"
     echo "   -q       : quiet"
-    echo "   module   : all, sundials, arkode, cvode, cvodes, ida, idas, kinsol"
+    echo "   module   : all, sundials, arkode, cvode, cvodes, firkode, ida, idas, kinsol"
     echo ""
     echo "Notes: If the module is not specified, all tarballs are created."
     echo "       This script must be executed from within its directory."
@@ -67,6 +67,7 @@ IDA_VER="7.9.0"
 IDAS_VER="6.9.0"
 KIN_VER="7.9.0"
 ARK_VER="6.9.0"
+FIRK_VER="0.1.0"
 
 #---------------------------------------------------------
 # Test if the script is executed from within its directory
@@ -112,6 +113,7 @@ do_cvodes=F
 do_ida=F
 do_idas=F
 do_kinsol=F
+do_firkode=F
 
 if [ -z $module ]; then
     module="all"
@@ -122,6 +124,7 @@ if [ -z $module ]; then
     do_ida=T
     do_idas=T
     do_kinsol=T
+    do_firkode=T
 else
     case $module in
         all)
@@ -132,6 +135,7 @@ else
             do_ida=T
             do_idas=T
             do_kinsol=T
+            do_firkode=T
             ;;
         sundials)
             do_sundials=T
@@ -153,6 +157,9 @@ else
             ;;
         kinsol)
             do_kinsol=T
+            ;;
+        firkode)
+            do_firkode=T
             ;;
         *)
             echo "Invalid module $module"
@@ -342,6 +349,27 @@ do
     fi
 done
 
+# packages with a user guide but no example documentation
+declare -a packages_guide=('firkode')
+for pkg in "${packages_guide[@]}";
+do
+    do_package=do_${pkg}
+    if [ $do_sundials = "T" -o ${!do_package} = "T" ]; then
+        cp -r $sundialsdir/include/$pkg $tmpdir/include/
+        cp -r $sundialsdir/src/$pkg $tmpdir/src/
+        cp -r $sundialsdir/examples/$pkg $tmpdir/examples/
+        mkdir -p $tmpdir/doc/$pkg
+        if [ $doc = "T" ]; then
+            echo -e "--- ${pkg} documentation"
+            cd $sundialsdir/doc/$pkg/guide
+            make clean
+            make latexpdf
+            cp build/latex/*_guide.pdf $tmpdir/doc/$pkg/
+            cd -
+        fi
+    fi
+done
+
 #---------------------------
 # Create tar files
 #---------------------------
@@ -368,6 +396,7 @@ if [ $do_sundials = "T" ]; then
     $scriptdir/ida.sh    $tarfile $distrobase $doc $tar
     $scriptdir/idas.sh   $tarfile $distrobase $doc $tar
     $scriptdir/kinsol.sh $tarfile $distrobase $doc $tar
+    $scriptdir/firkode.sh $tarfile $distrobase $doc $tar
 
     ### Don't release MATLAB until brought current with new version(s)
     # $scriptdir/stb $tarfile $distrobase $doc $tar
@@ -456,6 +485,20 @@ if [ $do_kinsol = "T" ]; then
     tarfile=$filename".tar"
     $scriptdir/shared.sh $tarfile $distrobase $doc $tar
     $scriptdir/kinsol.sh $tarfile $distrobase $doc $tar
+    gzip $tarfile
+fi
+
+# FIRKODE
+if [ $do_firkode = "T" ]; then
+    echo -e "\n--- Generate FIRKODE tarball ---"
+
+    mv $distrobase firkode-$FIRK_VER
+    distrobase="firkode-"$FIRK_VER
+    filename="firkode-"$FIRK_VER
+
+    tarfile=$filename".tar"
+    $scriptdir/shared.sh $tarfile $distrobase $doc $tar
+    $scriptdir/firkode.sh $tarfile $distrobase $doc $tar
     gzip $tarfile
 fi
 

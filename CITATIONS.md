@@ -118,3 +118,12 @@ service to your own readers.  The relevant SUNDIALS documentation guides are:
   note   = {v7.9.0}
 }
 ```
+
+```bibtex
+@Misc{firkodeDocumentation,
+  author = {Yifan Hu},
+  title  = {User Documentation for FIRKODE},
+  year   = {2026},
+  note   = {v0.1.0}
+}
+```

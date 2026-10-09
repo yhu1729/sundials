@@ -676,6 +676,21 @@ packages.
 
       Replaces the deprecated option ``BUILD_CVODES``
 
+.. cmakeoption:: SUNDIALS_ENABLE_FIRKODE
+
+   Enable the FIRKODE library
+
+   Default: ``ON``
+
+   .. note::
+
+      FIRKODE stores its stages in the :ref:`NVECTOR_MANYVECTOR
+      <NVectors.ManyVector>` module and, with MPI, in the
+      :ref:`NVECTOR_MPIMANYVECTOR <NVectors.MPIManyVector>` module; enabling
+      FIRKODE enables them when they are disabled.
+
+   .. versionadded:: X.Y.Z
+
 .. cmakeoption:: SUNDIALS_ENABLE_IDA
 
    Enable the IDA library
@@ -3095,6 +3110,38 @@ below to use ARKODE and XBraid together.
    | Headers      | ``arkode/arkode_xbraid.h``                   |
    +--------------+----------------------------------------------+
    | CMake target | ``SUNDIALS::arkode_xbraid``                  |
+   +--------------+----------------------------------------------+
+
+.. _Installation.LibrariesAndHeaders.Packages.FIRKODE:
+
+FIRKODE
+"""""""
+
+To use the :ref:`FIRKODE <FIRKODE>` package, include the header file and link
+to the library given below.
+
+.. table:: FIRKODE library, header file, and CMake target
+   :align: center
+
+   +--------------+----------------------------------------------+
+   | Libraries    | ``libsundials_firkode.LIB``                  |
+   +--------------+----------------------------------------------+
+   | Headers      | ``firkode/firkode.h``                        |
+   +--------------+----------------------------------------------+
+   | CMake target | ``SUNDIALS::firkode``                        |
+   +--------------+----------------------------------------------+
+
+The FIRKODE header file includes the files below which define functions,
+types, and constants for the FIRKODE linear solver interface and the Radau
+IIA coefficient tables.
+
+.. table:: Additional header files included by ``firkode.h``
+   :align: center
+
+   +--------------+----------------------------------------------+
+   | Headers      | ``firkode/firkode_ls.h``                     |
+   |              +----------------------------------------------+
+   |              | ``firkode/firkode_tables.h``                 |
    +--------------+----------------------------------------------+
 
 .. _Installation.LibrariesAndHeaders.Packages.IDA:

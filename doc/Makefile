@@ -20,6 +20,7 @@
 DIRS = arkode/guide arkode/examples \
        cvode/guide cvode/examples \
        cvodes/guide cvodes/examples \
+       firkode/guide \
        ida/guide ida/examples \
        idas/guide idas/examples \
        kinsol/guide kinsol/examples

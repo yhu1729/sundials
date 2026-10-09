@@ -386,6 +386,16 @@ def main():
         "Build the KINSOL library",
     )
 
+    add_arg(
+        group,
+        "--firkode",
+        "SUNDIALS_FIRKODE",
+        "SUNDIALS_ENABLE_FIRKODE",
+        "ON",
+        "BOOL",
+        "Build the FIRKODE library",
+    )
+
     # -----------------
     # Packages Options
     # -----------------

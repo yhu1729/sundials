@@ -25,3 +25,4 @@ Packages
 
    arkode/index.rst
    cvode/index.rst
+   firkode/index.rst

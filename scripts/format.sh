@@ -29,11 +29,12 @@ fi
 
 paths=( "$@" )
 
+# Lake build directories (.lake) under verification/lean hold generated C files
 find "${paths[@]}" -iname '*.h' -o -iname '*.hpp' -o \
      -iname '*.c' -o -iname '*.cpp' -o \
-     -iname '*.cuh' -o -iname '*.cu' | grep -v fmod | xargs clang-format -i
+     -iname '*.cuh' -o -iname '*.cu' | grep -v fmod | grep -v '/\.lake/' | xargs clang-format -i
 
-find "${paths[@]}" -iname '*.f90' | grep -v fmod | xargs fprettify --indent 2 --enable-replacements --c-relations
+find "${paths[@]}" -iname '*.f90' | grep -v fmod | grep -v '/\.lake/' | xargs fprettify --indent 2 --enable-replacements --c-relations
 
 find "${paths[@]}" \( -iname '*.cmake' -o -iname 'CMakeLists.txt' \) \
      -exec cmake-format -i {} ';'

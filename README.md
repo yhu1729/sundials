@@ -36,6 +36,12 @@ nonlinear algebraic systems:
 
   $$y' = f(t,y,p), \quad y(t_0) = y_0(p)$$
 
+* FIRKODE (experimental, version 0.1.0) - for integrating stiff ODEs with
+  the fully implicit Radau IIA Runge-Kutta method of RADAU5, for systems of
+  the form
+
+  $$M y' = f(t,y), \quad y(t_0) = y_0$$
+
 * IDA - for integrating DAEs of the form
 
   $$F(t,y,y') = 0, \quad y(t_0) = y_0, \quad y'(t_0) = y_0'$$

@@ -8,6 +8,7 @@
 - `cmake/`: CMake modules and option definitions (e.g., example/test toggles).
 - `bindings/` and `swig/`: language bindings (notably `bindings/sundials4py`).
 - `doc/`: user/developer documentation sources.
+- `verification/`: formal verification outside the CMake build (e.g., `verification/lean/`, Lean 4 proofs of the FIRKODE Radau IIA mathematics).
 
 ## Build, Test, and Development Commands
 

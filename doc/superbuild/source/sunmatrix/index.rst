@@ -26,7 +26,7 @@ implementations, designed for simulations requiring direct linear
 solvers for problems in serial or shared-memory parallel
 environments.  SUNDIALS additionally provides a simple interface for
 generic matrices (akin to a C++ *abstract base class*).  All of the
-major SUNDIALS packages (CVODE(s), IDA(s), KINSOL, ARKODE), are
+major SUNDIALS packages (CVODE(s), IDA(s), KINSOL, ARKODE, FIRKODE), are
 constructed to only depend on these generic matrix operations, making
 them immediately extensible to new user-defined matrix objects.  For
 each of the SUNDIALS-provided matrix types, SUNDIALS also provides

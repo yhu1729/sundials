@@ -17,7 +17,7 @@ Adams-Moulton methods for non-stiff problems or BDF (Backward Differentiation
 Formula) methods in fixed-leading-coefficient form for stiff problems.
 
 CVODES is part of the SUNDIALS Suite of Nonlinear and Differential/Algebraic
-equation Solvers which consists of ARKode, CVODE, CVODES, IDA, IDAS and KINSOL.
+equation Solvers which consists of ARKode, CVODE, CVODES, FIRKODE, IDA, IDAS and KINSOL.
 It is written in ANSI standard C and can be used in a variety of computing
 environments including serial, shared memory, distributed memory, and
 accelerator-based (e.g., GPU) systems. This flexibility is obtained from a

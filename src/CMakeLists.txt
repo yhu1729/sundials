@@ -58,3 +58,8 @@ endif()
 if(SUNDIALS_ENABLE_KINSOL)
   add_subdirectory(kinsol)
 endif()
+
+# FIRKODE library
+if(SUNDIALS_ENABLE_FIRKODE)
+  add_subdirectory(firkode)
+endif()

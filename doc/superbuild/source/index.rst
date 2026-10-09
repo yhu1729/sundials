@@ -36,6 +36,9 @@ SUNDIALS is comprised of following packages:
 * :ref:`CVODES <CVODES>`, an extension of CVODE with forward and adjoint
   sensitivity analysis capabilities for stiff and nonstiff ODE systems.
 
+* :ref:`FIRKODE <FIRKODE>`, a solver with fully implicit Radau IIA Runge-Kutta
+  methods for stiff ODE systems.
+
 * :ref:`IDA <IDA>`, a solver with BDF methods for DAE systems.
 
 * :ref:`IDAS <IDAS>`, an extension of IDA with forward and adjoint sensitivity
@@ -102,6 +105,7 @@ SUNDIALS License and Notices
    arkode/index.rst
    cvode/index.rst
    cvodes/index.rst
+   firkode/index.rst
    ida/index.rst
    idas/index.rst
    kinsol/index.rst

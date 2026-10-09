@@ -49,6 +49,9 @@ jobs:
       - name: Print fprettify version
         run: fprettify --version
 
+      - name: Install mpmath
+        run: pip install mpmath
+
       - name: Print clang-format version
         run: clang-format --version
 
@@ -65,6 +68,10 @@ jobs:
       - name: Run formatting checks
         run: |
           ./scripts/format.sh .
+
+      - name: Check the generated FIRKODE tables
+        run: |
+          python3 ./scripts/firkode_radau_tables.py --check
 
       - name: Run git diff to see if anything changed
         run: /usr/bin/git diff --exit-code

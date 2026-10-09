@@ -132,6 +132,7 @@ source_replacements = {
     "|IDA_VERSION|": ida_version,
     "|IDAS_VERSION|": idas_version,
     "|KINSOL_VERSION|": kinsol_version,
+    "|FIRKODE_VERSION|": firkode_version,
 }
 
 rst_epilog = "\n".join(

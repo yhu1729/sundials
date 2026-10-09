@@ -17,6 +17,6 @@
 # ---------------------------------------------------------------------------------
 
 codespell \
-    --skip="*.git,*.bib,*.eps,*.pdf,*/fmod_int*,*/_themes,*/test/answers" \
-    -L "inout,ans,Numer,KnWo,Wit,MaPe,ASAi,crate,htmp,thist,thi,MIS,dout,usin,alph,wQS,delt,ue,Bu,ue,nd,ist,strat,ttest" \
+    --skip="*.git,*.bib,*.eps,*.pdf,*/fmod_int*,*/_themes,*/test/answers,*/.lake,*.ref" \
+    -L "inout,ans,Numer,THET,KnWo,Wit,MaPe,ASAi,crate,htmp,thist,thi,MIS,dout,usin,alph,wQS,delt,ue,Bu,ue,nd,ist,strat,ttest" \
     --write-changes

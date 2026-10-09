@@ -22,6 +22,7 @@ This is a list of tasks that need to be done before a SUNDIALS release.
    * `src/ida/README`
    * `src/idas/README`
    * `src/kinsol/README`
+   * `src/firkode/README.md`
    * `doc/arkode/examples/source/conf.py`
    * `doc/shared/versions.py`
    * `doc/shared/History.rst`

@@ -15,7 +15,7 @@ fixed-point. Both Picard and fixed point can be accelerated with Anderson
 acceleration.
 
 KINSOL is part of the SUNDIALS Suite of Nonlinear and Differential/Algebraic
-equation Solvers which consists of ARKode, CVODE, CVODES, IDA, IDAS and KINSOL.
+equation Solvers which consists of ARKode, CVODE, CVODES, FIRKODE, IDA, IDAS and KINSOL.
 It is written in ANSI standard C, but is based on the previous Fortran package
 NKSOL, written by Peter Brown and Youcef Saad. KINSOL can be used in a variety
 of computing environments including serial, shared memory, distributed memory,

@@ -20,6 +20,7 @@ cvodes_version = "v7.9.0"
 ida_version = "v7.9.0"
 idas_version = "v6.9.0"
 kinsol_version = "v7.9.0"
+firkode_version = "v0.1.0"
 year = "2026"
 
 # Warn about all references where the target cannot be found

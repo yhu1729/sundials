@@ -1,0 +1,24 @@
+# radau5.f reference for firk_test_radau5_steps, written by run_radau5.py
+# sources https://www.unige.ch/~hairer/prog/stiff/ radau5.f sha256 a3f1be7dbf719e232b710e1c7a50ad2079bef27c0a5f3b87b012f64ea65f39d3
+# compiler GNU Fortran (Homebrew GCC 16.2.0) 16.2.0, flags -O2, platform macOS-27.0.1-arm64-arm-64bit-Mach-O
+problem orego
+n 3
+tend  3.60000000000000000E+002
+h0  9.99999999999999955E-007
+rtol_nominal  9.99999999999999999E-015
+atol_nominal  9.99999999999999999E-015
+rtol  4.64158883361278510E-011
+atol  4.64158883361278510E-011
+idid 1
+nfcn 82171
+njac 1916
+nstep 11149
+naccpt 11146
+nrejct 2
+ndec 6761
+nsol 23675
+t  3.60000000000000000E+002
+y 1  1.00081487031852245E+000
+y 2  1.22817852155030596E+003
+y 3  1.32055494284958229E+002
+end

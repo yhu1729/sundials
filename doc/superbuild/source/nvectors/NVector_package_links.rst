@@ -17,6 +17,7 @@
 .. include:: ../../../arkode/guide/source/nvectors/ARKODE_requirements.rst
 .. include:: ../../../cvode/guide/source/nvectors/CVODE_requirements.rst
 .. include:: ../../../cvodes/guide/source/nvectors/CVODES_requirements.rst
+.. include:: ../../../firkode/guide/source/nvectors/FIRKODE_requirements.rst
 .. include:: ../../../ida/guide/source/nvectors/IDA_requirements.rst
 .. include:: ../../../idas/guide/source/nvectors/IDAS_requirements.rst
 .. include:: ../../../kinsol/guide/source/nvectors/KINSOL_requirements.rst

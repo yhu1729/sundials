@@ -32,7 +32,7 @@ the data.
 
 In addition, SUNDIALS provides a simple interface for generic vectors
 (akin to a C++ *abstract base class*).  All of the major SUNDIALS
-solvers (CVODE(s), IDA(s), KINSOL, ARKODE) in turn are constructed to
+solvers (CVODE(s), IDA(s), KINSOL, ARKODE, FIRKODE) in turn are constructed to
 only depend on these generic vector operations, making them immediately
 extensible to new user-defined vector objects.  The only exceptions to
 this rule relate to the dense, banded and sparse-direct linear system

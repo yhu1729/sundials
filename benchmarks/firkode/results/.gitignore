@@ -1,0 +1,6 @@
+# per-run scratch data that is not committed
+*/reference/
+*/logs/
+*/claims/
+*/jac/
+*/*.log

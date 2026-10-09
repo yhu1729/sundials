@@ -19,11 +19,11 @@
 Getting Started
 ===============
 
-As discussed in :numref:`Organization`, the six solver packages
-(CVODE(S), IDA(S), ARKODE, KINSOL) that make up SUNDIALS are built upon common
+As discussed in :numref:`Organization`, the solver packages (CVODE(S),
+IDA(S), ARKODE, FIRKODE, KINSOL) that make up SUNDIALS are built upon common
 classes/modules for vectors, matrices, and algebraic solvers. In addition, the
-six packages all leverage some other common infrastructure, which we discuss
-in this section.
+packages all leverage some other common infrastructure, which we discuss in
+this section.
 
 .. toctree::
 

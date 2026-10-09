@@ -1,0 +1,11 @@
+List of parallel FIRKODE examples
+
+  firk_robertson_batched_p : batched Robertson kinetics on NVECTOR_PARALLEL,
+                             SPGMR with a block-Jacobi preconditioner; the run
+                             checks itself against a serial run on rank 0
+
+Sample results:
+
+  The example prints the solution of the first copy, the step and Newton
+  iteration counts of the distributed and serial runs, and PASSED or FAILED.
+  Iteration counts may differ across platforms.

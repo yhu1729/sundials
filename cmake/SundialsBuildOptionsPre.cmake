@@ -210,6 +210,13 @@ else()
   set(SUNDIALS_ENABLE_KINSOL OFF)
 endif()
 
+if(IS_DIRECTORY "${SUNDIALS_SOURCE_DIR}/src/firkode")
+  sundials_option(SUNDIALS_ENABLE_FIRKODE BOOL "Enable the FIRKODE library" ON)
+  list(APPEND SUNDIALS_BUILD_LIST "SUNDIALS_ENABLE_FIRKODE")
+else()
+  set(SUNDIALS_ENABLE_FIRKODE OFF)
+endif()
+
 # ---------------------------------------------------------------
 # Options to enable Fortran interfaces.
 # ---------------------------------------------------------------

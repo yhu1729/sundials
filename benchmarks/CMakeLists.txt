@@ -46,3 +46,8 @@ endif()
 if(BENCHMARK_NVECTOR)
   add_subdirectory(nvector)
 endif()
+
+# FIRKODE: the stacked Krylov iteration counts
+if(SUNDIALS_ENABLE_FIRKODE)
+  add_subdirectory(firkode)
+endif()

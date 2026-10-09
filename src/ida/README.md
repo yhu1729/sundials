@@ -15,7 +15,7 @@ The integration methods used in IDA are variable-order, variable-coefficient BDF
 (Backward Differentiation Formula) methods in fixed-leading-coefficient form.
 
 IDA is part of the SUNDIALS Suite of Nonlinear and Differential/Algebraic
-equation Solvers which consists of ARKode, CVODE, CVODES, IDA, IDAS and KINSOL.
+equation Solvers which consists of ARKode, CVODE, CVODES, FIRKODE, IDA, IDAS and KINSOL.
 It is written in ANSI standard C, but is derived from the package DASPK, which
 is written in FORTRAN. IDA can be used in a variety of computing environments
 including serial, shared memory, distributed memory, and accelerator-based

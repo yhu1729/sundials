@@ -1,0 +1,8 @@
+List of serial FIRKODE C examples
+
+  firk_analytic          : simple stiff, linear ODE                    (Radau IIA/DENSE)
+  firk_diurnal_kry       : 2D diurnal kinetics PDE, user preconditioner (Radau IIA/SPGMR)
+  firk_heat1D_fem_mass   : 1D heat equation, P1 FEM with mass matrix   (Radau IIA/BAND)
+  firk_robertson         : stiff chemical kinetics ODE system          (Radau IIA/DENSE)
+  firk_robertson_root    : stiff chemical kinetics with root-finding   (Radau IIA/DENSE)
+

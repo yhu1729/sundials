@@ -4,6 +4,23 @@
 
 ### Major Features
 
+Added a new, experimental package, FIRKODE, that integrates stiff ODE systems
+`M y' = f(t,y)` with the fully implicit Radau IIA Runge-Kutta methods. Its
+version 0.1.0, numbered independently of SUNDIALS, provides the three-stage
+method of order five, the method of RADAU5, with its simplified Newton
+iteration, filtered error estimate, predictive step size controller, Newton
+tolerance and Jacobian reuse policy; the other stage counts (orders 1 to 17)
+are planned for later versions. The coupled stage equations are solved on the
+stacked stage system by an internal flexible GMRES iteration preconditioned
+block-wise with any SUNDIALS `SUNLinearSolver` (direct, matrix-based iterative,
+or matrix-free), so that only systems of the size of the ODE are ever factored.
+FIRKODE provides `SUNAdaptController`-based step size adaptivity, collocation
+dense output, rootfinding, and constant non-identity mass matrices, and runs
+with the serial, parallel and many-vector `N_Vector` implementations. The
+package is enabled with the `SUNDIALS_ENABLE_FIRKODE` CMake option and is
+exported as the `SUNDIALS::firkode` target. Its API may change before version
+1.0; Fortran and Python interfaces are not yet available.
+
 ### New Features and Enhancements
 
 Added the utility function, `SUNFileFlush` for flushing file pointers. This is

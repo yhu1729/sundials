@@ -144,3 +144,14 @@ service to your own readers.  The relevant SUNDIALS documentation guides are:
       url          = {https://sundials.readthedocs.io/en/latest/kinsol},
       howpublished = {\url{https://sundials.readthedocs.io/en/latest/kinsol}}
    }
+
+.. parsed-literal::
+
+   @Misc{firkodeDocumentation,
+      author       = {Yifan Hu},
+      title        = {User Documentation for FIRKODE},
+      year         = {|YEAR|},
+      note         = {|FIRKODE_VERSION|},
+      url          = {https://sundials.readthedocs.io/en/latest/firkode},
+      howpublished = {\url{https://sundials.readthedocs.io/en/latest/firkode}}
+   }
