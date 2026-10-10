@@ -64,7 +64,9 @@ struct DiurnalData
   std::vector<sunindextype*> pivot;
 
   sunrealtype& at(sunrealtype* v, int i, int jx, int jy) const
-  { return v[i - 1 + jx * NUM_SPECIES + jy * NUM_SPECIES * mx]; }
+  {
+    return v[i - 1 + jx * NUM_SPECIES + jy * NUM_SPECIES * mx];
+  }
 
   int blk(int jx, int jy) const { return jx + jy * mx; }
 
@@ -296,6 +298,152 @@ int diurnal_psolve(sunrealtype, N_Vector, N_Vector, N_Vector r, N_Vector z,
   return 0;
 }
 
+// IMEX splitting "imex": the kinetics are implicit, the transport
+// (vertical diffusion, horizontal diffusion and advection) explicit.
+// Separate functions; the kinetics set q4 as diurnal_rhs does.
+int diurnal_kinetics(sunrealtype t, N_Vector u, N_Vector udot, void* user_data)
+{
+  DiurnalData* d      = static_cast<DiurnalData*>(user_data);
+  sunrealtype* udata  = N_VGetArrayPointer(u);
+  sunrealtype* dudata = N_VGetArrayPointer(udot);
+  const sunrealtype s = std::sin(d->om * t);
+  sunrealtype q3;
+  if (s > ZERO)
+  {
+    q3    = std::exp(-A3 / s);
+    d->q4 = std::exp(-A4 / s);
+  }
+  else
+  {
+    q3    = ZERO;
+    d->q4 = ZERO;
+  }
+  const sunrealtype q4coef = d->q4;
+  for (int jy = 0; jy < d->my; jy++)
+  {
+    for (int jx = 0; jx < d->mx; jx++)
+    {
+      const sunrealtype c1  = d->at(udata, 1, jx, jy);
+      const sunrealtype c2  = d->at(udata, 2, jx, jy);
+      const sunrealtype qq1 = Q1 * c1 * C3, qq2 = Q2 * c1 * c2, qq3 = q3 * C3,
+                        qq4    = q4coef * c2;
+      d->at(dudata, 1, jx, jy) = -qq1 - qq2 + TWO * qq3 + qq4;
+      d->at(dudata, 2, jx, jy) = qq1 - qq2 - qq4;
+    }
+  }
+  return 0;
+}
+
+int diurnal_transport(sunrealtype, N_Vector u, N_Vector udot, void* user_data)
+{
+  DiurnalData* d         = static_cast<DiurnalData*>(user_data);
+  sunrealtype* udata     = N_VGetArrayPointer(u);
+  sunrealtype* dudata    = N_VGetArrayPointer(udot);
+  const sunrealtype dely = d->dy, verdco = d->vdco, hordco = d->hdco,
+                    horaco = d->haco;
+  for (int jy = 0; jy < d->my; jy++)
+  {
+    const sunrealtype ydn  = YMIN + (jy - SUN_RCONST(0.5)) * dely;
+    const sunrealtype yup  = ydn + dely;
+    const sunrealtype cydn = verdco * std::exp(SUN_RCONST(0.2) * ydn);
+    const sunrealtype cyup = verdco * std::exp(SUN_RCONST(0.2) * yup);
+    const int idn          = (jy == 0) ? 1 : -1;
+    const int iup          = (jy == d->my - 1) ? -1 : 1;
+    for (int jx = 0; jx < d->mx; jx++)
+    {
+      const sunrealtype c1     = d->at(udata, 1, jx, jy);
+      const sunrealtype c2     = d->at(udata, 2, jx, jy);
+      const sunrealtype c1dn   = d->at(udata, 1, jx, jy + idn);
+      const sunrealtype c2dn   = d->at(udata, 2, jx, jy + idn);
+      const sunrealtype c1up   = d->at(udata, 1, jx, jy + iup);
+      const sunrealtype c2up   = d->at(udata, 2, jx, jy + iup);
+      const sunrealtype vertd1 = cyup * (c1up - c1) - cydn * (c1 - c1dn);
+      const sunrealtype vertd2 = cyup * (c2up - c2) - cydn * (c2 - c2dn);
+      const int ileft          = (jx == 0) ? 1 : -1;
+      const int iright         = (jx == d->mx - 1) ? -1 : 1;
+      const sunrealtype c1lt   = d->at(udata, 1, jx + ileft, jy);
+      const sunrealtype c2lt   = d->at(udata, 2, jx + ileft, jy);
+      const sunrealtype c1rt   = d->at(udata, 1, jx + iright, jy);
+      const sunrealtype c2rt   = d->at(udata, 2, jx + iright, jy);
+      const sunrealtype hord1  = hordco * (c1rt - TWO * c1 + c1lt);
+      const sunrealtype hord2  = hordco * (c2rt - TWO * c2 + c2lt);
+      const sunrealtype horad1 = horaco * (c1rt - c1lt);
+      const sunrealtype horad2 = horaco * (c2rt - c2lt);
+      d->at(dudata, 1, jx, jy) = vertd1 + hord1 + horad1;
+      d->at(dudata, 2, jx, jy) = vertd2 + hord2 + horad2;
+    }
+  }
+  return 0;
+}
+
+int diurnal_jtv_kinetics(N_Vector v, N_Vector Jv, sunrealtype t, N_Vector u,
+                         N_Vector, void* user_data, N_Vector)
+{
+  DiurnalData* d           = static_cast<DiurnalData*>(user_data);
+  sunrealtype* udata       = N_VGetArrayPointer(u);
+  sunrealtype* vdata       = N_VGetArrayPointer(v);
+  sunrealtype* Jvdata      = N_VGetArrayPointer(Jv);
+  const sunrealtype s      = std::sin(d->om * t);
+  d->q4                    = (s > ZERO) ? std::exp(-A4 / s) : ZERO;
+  const sunrealtype q4coef = d->q4;
+  for (int jy = 0; jy < d->my; jy++)
+  {
+    for (int jx = 0; jx < d->mx; jx++)
+    {
+      const sunrealtype c1     = d->at(udata, 1, jx, jy);
+      const sunrealtype c2     = d->at(udata, 2, jx, jy);
+      const sunrealtype v1     = d->at(vdata, 1, jx, jy);
+      const sunrealtype v2     = d->at(vdata, 2, jx, jy);
+      d->at(Jvdata, 1, jx, jy) = -(Q1 * C3 + Q2 * c2) * v1 +
+                                 (q4coef - Q2 * c1) * v2;
+      d->at(Jvdata, 2, jx, jy) = (Q1 * C3 - Q2 * c2) * v1 -
+                                 (q4coef + Q2 * c1) * v2;
+    }
+  }
+  return 0;
+}
+
+// P = I - gamma J_kinetics, block by block: the exact inverse of the
+// implicit part's Newton matrix (q4 from t, not from the last f call)
+int diurnal_psetup_kinetics(sunrealtype t, N_Vector u, N_Vector,
+                            sunbooleantype jok, sunbooleantype* jcurPtr,
+                            sunrealtype gamma, void* user_data)
+{
+  DiurnalData* d           = static_cast<DiurnalData*>(user_data);
+  sunrealtype* udata       = N_VGetArrayPointer(u);
+  const sunrealtype s      = std::sin(d->om * t);
+  const sunrealtype q4coef = (s > ZERO) ? std::exp(-A4 / s) : ZERO;
+  for (int jy = 0; jy < d->my; jy++)
+  {
+    for (int jx = 0; jx < d->mx; jx++)
+    {
+      sunrealtype** j = d->Jbd[(size_t)d->blk(jx, jy)];
+      sunrealtype** a = d->P[(size_t)d->blk(jx, jy)];
+      if (!jok)
+      {
+        const sunrealtype c1 = d->at(udata, 1, jx, jy);
+        const sunrealtype c2 = d->at(udata, 2, jx, jy);
+        j[0][0]              = -Q1 * C3 - Q2 * c2;
+        j[1][0]              = -Q2 * c1 + q4coef;
+        j[0][1]              = Q1 * C3 - Q2 * c2;
+        j[1][1]              = -Q2 * c1 - q4coef;
+      }
+      SUNDlsMat_denseCopy(j, a, NUM_SPECIES, NUM_SPECIES);
+    }
+  }
+  *jcurPtr = jok ? SUNFALSE : SUNTRUE;
+  for (size_t k = 0; k < d->P.size(); k++)
+  {
+    SUNDlsMat_denseScale(-gamma, d->P[k], NUM_SPECIES, NUM_SPECIES);
+    SUNDlsMat_denseAddIdentity(d->P[k], NUM_SPECIES);
+    if (SUNDlsMat_denseGETRF(d->P[k], NUM_SPECIES, NUM_SPECIES, d->pivot[k]) != 0)
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 class Diurnal : public Problem
 {
 public:
@@ -328,13 +476,13 @@ public:
     {
       const sunrealtype yv = YMIN + jy * data_.dy;
       sunrealtype cy       = (SUN_RCONST(0.1) * (yv - YMID)) *
-                             (SUN_RCONST(0.1) * (yv - YMID));
-      cy                   = ONE - cy + SUN_RCONST(0.5) * cy * cy;
+                       (SUN_RCONST(0.1) * (yv - YMID));
+      cy = ONE - cy + SUN_RCONST(0.5) * cy * cy;
       for (int jx = 0; jx < data_.mx; jx++)
       {
-        const sunrealtype xv       = XMIN + jx * data_.dx;
-        sunrealtype cx             = (SUN_RCONST(0.1) * (xv - XMID)) *
-                                     (SUN_RCONST(0.1) * (xv - XMID));
+        const sunrealtype xv = XMIN + jx * data_.dx;
+        sunrealtype cx       = (SUN_RCONST(0.1) * (xv - XMID)) *
+                         (SUN_RCONST(0.1) * (xv - XMID));
         cx                         = ONE - cx + SUN_RCONST(0.5) * cx * cx;
         data_.at(udata, 1, jx, jy) = C1_SCALE * cx * cy;
         data_.at(udata, 2, jx, jy) = C2_SCALE * cx * cy;
@@ -352,6 +500,18 @@ public:
 
   FIRKLsPrecSolveFn psolve() const override { return diurnal_psolve; }
 
+  std::vector<RhsSplit> splits() const override
+  {
+    RhsSplit imex;
+    imex.name     = "imex";
+    imex.fe       = diurnal_transport;
+    imex.fi       = diurnal_kinetics;
+    imex.jtimes_i = diurnal_jtv_kinetics;
+    imex.psetup_i = diurnal_psetup_kinetics;
+    imex.psolve_i = diurnal_psolve;
+    return {imex};
+  }
+
 private:
   void set_grid(int mx, int my)
   {
@@ -365,6 +525,8 @@ private:
 } // namespace
 
 std::unique_ptr<Problem> make_diurnal()
-{ return std::unique_ptr<Problem>(new Diurnal()); }
+{
+  return std::unique_ptr<Problem>(new Diurnal());
+}
 
 } // namespace benchmark

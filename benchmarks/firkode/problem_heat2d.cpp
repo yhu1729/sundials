@@ -88,10 +88,42 @@ struct Heat2DData
   }
 
   sunrealtype diag() const { return -TWO * cx - TWO * cy; }
+
+  // The pieces of the splittings: diffusion, advection and the forcing
+  void apply_diffusion(const sunrealtype* u, sunrealtype* out) const
+  {
+    for (int j = 0; j < my; j++)
+    {
+      for (int i = 0; i < mx; i++)
+      {
+        const sunrealtype uc = u[idx(i, j)];
+        const sunrealtype ul = (i > 0) ? u[idx(i - 1, j)] : ZERO;
+        const sunrealtype ur = (i < mx - 1) ? u[idx(i + 1, j)] : ZERO;
+        const sunrealtype ud = (j > 0) ? u[idx(i, j - 1)] : ZERO;
+        const sunrealtype uu = (j < my - 1) ? u[idx(i, j + 1)] : ZERO;
+        out[idx(i, j)] = cx * (ul - TWO * uc + ur) + cy * (ud - TWO * uc + uu);
+      }
+    }
+  }
+
+  void apply_advection(const sunrealtype* u, sunrealtype* out) const
+  {
+    for (int j = 0; j < my; j++)
+    {
+      for (int i = 0; i < mx; i++)
+      {
+        const sunrealtype ul = (i > 0) ? u[idx(i - 1, j)] : ZERO;
+        const sunrealtype ur = (i < mx - 1) ? u[idx(i + 1, j)] : ZERO;
+        out[idx(i, j)]       = -ca * (ur - ul);
+      }
+    }
+  }
 };
 
 sunrealtype exact_pde(sunrealtype t, sunrealtype x, sunrealtype y)
-{ return std::exp(-t) * std::sin(PI * x) * std::sin(PI * y); }
+{
+  return std::exp(-t) * std::sin(PI * x) * std::sin(PI * y);
+}
 
 int heat2d_rhs(sunrealtype t, N_Vector uv, N_Vector udot, void* user_data)
 {
@@ -111,9 +143,128 @@ int heat2d_rhs(sunrealtype t, N_Vector uv, N_Vector udot, void* user_data)
       const sunrealtype sx = std::sin(PI * x);
       const sunrealtype us = et * sx * sy;
       const sunrealtype b  = -us + TWO * PI * PI * us +
-                             d->v * PI * et * std::cos(PI * x) * sy;
+                            d->v * PI * et * std::cos(PI * x) * sy;
       f[d->idx(i, j)] += b;
     }
+  }
+  return 0;
+}
+
+// forcing b = u*_t - (Lu* - v u*_x) as in heat2d_rhs; out = add ? out + b : b
+void heat2d_forcing(const Heat2DData* d, sunrealtype t, sunrealtype* f, bool add)
+{
+  const sunrealtype et = std::exp(-t);
+  for (int j = 0; j < d->my; j++)
+  {
+    const sunrealtype y  = (j + 1) * d->dy;
+    const sunrealtype sy = std::sin(PI * y);
+    for (int i = 0; i < d->mx; i++)
+    {
+      const sunrealtype x  = (i + 1) * d->dx;
+      const sunrealtype sx = std::sin(PI * x);
+      const sunrealtype us = et * sx * sy;
+      const sunrealtype b  = -us + TWO * PI * PI * us +
+                            d->v * PI * et * std::cos(PI * x) * sy;
+      if (add) { f[d->idx(i, j)] += b; }
+      else { f[d->idx(i, j)] = b; }
+    }
+  }
+}
+
+// Splittings (separate functions; heat2d_rhs keeps its rounding):
+//   imex:     fe = advection + forcing, fi = diffusion
+//   mri:      fi = diffusion + forcing (slow implicit), ff = advection (fast)
+//   mri-imex: fe = forcing, fi = diffusion (slow), ff = advection (fast)
+int heat2d_diffusion(sunrealtype, N_Vector uv, N_Vector udot, void* user_data)
+{
+  const Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  d->apply_diffusion(N_VGetArrayPointer(uv), N_VGetArrayPointer(udot));
+  return 0;
+}
+
+int heat2d_diffusion_forcing(sunrealtype t, N_Vector uv, N_Vector udot,
+                             void* user_data)
+{
+  const Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  d->apply_diffusion(N_VGetArrayPointer(uv), N_VGetArrayPointer(udot));
+  heat2d_forcing(d, t, N_VGetArrayPointer(udot), true);
+  return 0;
+}
+
+int heat2d_advection(sunrealtype, N_Vector uv, N_Vector udot, void* user_data)
+{
+  const Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  d->apply_advection(N_VGetArrayPointer(uv), N_VGetArrayPointer(udot));
+  return 0;
+}
+
+int heat2d_advection_forcing(sunrealtype t, N_Vector uv, N_Vector udot,
+                             void* user_data)
+{
+  const Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  d->apply_advection(N_VGetArrayPointer(uv), N_VGetArrayPointer(udot));
+  heat2d_forcing(d, t, N_VGetArrayPointer(udot), true);
+  return 0;
+}
+
+int heat2d_forcing_only(sunrealtype t, N_Vector, N_Vector udot, void* user_data)
+{
+  heat2d_forcing(static_cast<Heat2DData*>(user_data), t,
+                 N_VGetArrayPointer(udot), false);
+  return 0;
+}
+
+int heat2d_jac_diffusion(sunrealtype, N_Vector, N_Vector, SUNMatrix J,
+                         void* user_data, N_Vector, N_Vector, N_Vector)
+{
+  Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  SUNMatZero(J);
+  for (int j = 0; j < d->my; j++)
+  {
+    for (int i = 0; i < d->mx; i++)
+    {
+      const sunindextype k  = d->idx(i, j);
+      SM_ELEMENT_B(J, k, k) = d->diag();
+      if (i > 0) { SM_ELEMENT_B(J, k, k - 1) = d->cx; }
+      if (i < d->mx - 1) { SM_ELEMENT_B(J, k, k + 1) = d->cx; }
+      if (j > 0) { SM_ELEMENT_B(J, k, k - d->mx) = d->cy; }
+      if (j < d->my - 1) { SM_ELEMENT_B(J, k, k + d->mx) = d->cy; }
+    }
+  }
+  return 0;
+}
+
+int heat2d_jtv_diffusion(N_Vector v, N_Vector Jv, sunrealtype, N_Vector,
+                         N_Vector, void* user_data, N_Vector)
+{
+  const Heat2DData* d = static_cast<Heat2DData*>(user_data);
+  d->apply_diffusion(N_VGetArrayPointer(v), N_VGetArrayPointer(Jv));
+  return 0;
+}
+
+// The eigenvalue of largest modulus of the constant Jacobian. Along x the
+// tridiagonal (cx + ca, -2 cx, cx - ca) has the eigenvalues
+// -2 cx + 2 sqrt(cx^2 - ca^2) cos(k pi / (mx + 1)): real for a cell Peclet
+// number ca / cx < 1, with the common real part -2 cx and imaginary parts
+// up to 2 sqrt(ca^2 - cx^2) cos(pi / (mx + 1)) above it
+int heat2d_dom_eig(sunrealtype, N_Vector, N_Vector, sunrealtype* lambdaR,
+                   sunrealtype* lambdaI, void* user_data, N_Vector, N_Vector,
+                   N_Vector)
+{
+  const Heat2DData* d    = static_cast<Heat2DData*>(user_data);
+  const sunrealtype cosx = std::cos(PI / (sunrealtype)(d->mx + 1));
+  const sunrealtype cosy = std::cos(PI / (sunrealtype)(d->my + 1));
+  const sunrealtype ly   = -TWO * d->cy - TWO * d->cy * cosy;
+  const sunrealtype disc = d->cx * d->cx - d->ca * d->ca;
+  if (disc >= ZERO)
+  {
+    *lambdaR = -TWO * d->cx - TWO * std::sqrt(disc) * cosx + ly;
+    *lambdaI = ZERO;
+  }
+  else
+  {
+    *lambdaR = -TWO * d->cx + ly;
+    *lambdaI = TWO * std::sqrt(-disc) * cosx;
   }
   return 0;
 }
@@ -219,16 +370,17 @@ class Heat2D : public Problem
 public:
   Heat2D()
   {
-    spec_.name         = "heat2d";
-    spec_.t0           = ZERO;
-    spec_.tf           = ONE;
-    spec_.rtol_default = SUN_RCONST(1.0e-6);
-    spec_.atol_default = SUN_RCONST(1.0e-10);
-    spec_.ls_default   = LinSolKind::Band;
-    spec_.has_jac      = true;
-    spec_.has_jtimes   = true;
-    spec_.has_prec     = true;
-    spec_.linear       = true;
+    spec_.name          = "heat2d";
+    spec_.t0            = ZERO;
+    spec_.tf            = ONE;
+    spec_.rtol_default  = SUN_RCONST(1.0e-6);
+    spec_.atol_default  = SUN_RCONST(1.0e-10);
+    spec_.ls_default    = LinSolKind::Band;
+    spec_.has_jac       = true;
+    spec_.has_jtimes    = true;
+    spec_.has_prec      = true;
+    spec_.linear        = true;
+    spec_.dom_eig_const = true;
     set_grid(32, 32, ZERO);
   }
 
@@ -274,6 +426,32 @@ public:
 
   FIRKLsPrecSolveFn psolve() const override { return heat2d_psolve; }
 
+  std::vector<RhsSplit> splits() const override
+  {
+    // the implicit part is the diffusion in every splitting; the Jacobi or
+    // inner-PCG preconditioner uses the diffusion diagonal only
+    RhsSplit base;
+    base.jac_i    = heat2d_jac_diffusion;
+    base.jtimes_i = heat2d_jtv_diffusion;
+    base.psetup_i = heat2d_psetup;
+    base.psolve_i = heat2d_psolve;
+    base.linear_i = true;
+    RhsSplit imex = base, mri = base, mri_imex = base;
+    imex.name     = "imex";
+    imex.fe       = heat2d_advection_forcing;
+    imex.fi       = heat2d_diffusion;
+    mri.name      = "mri";
+    mri.fi        = heat2d_diffusion_forcing;
+    mri.ff        = heat2d_advection;
+    mri_imex.name = "mri-imex";
+    mri_imex.fe   = heat2d_forcing_only;
+    mri_imex.fi   = heat2d_diffusion;
+    mri_imex.ff   = heat2d_advection;
+    return {imex, mri, mri_imex};
+  }
+
+  DomEigFn dom_eig() const override { return heat2d_dom_eig; }
+
 private:
   void set_grid(int mx, int my, sunrealtype v)
   {
@@ -290,6 +468,8 @@ private:
 } // namespace
 
 std::unique_ptr<Problem> make_heat2d()
-{ return std::unique_ptr<Problem>(new Heat2D()); }
+{
+  return std::unique_ptr<Problem>(new Heat2D());
+}
 
 } // namespace benchmark

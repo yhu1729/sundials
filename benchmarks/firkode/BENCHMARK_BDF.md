@@ -104,11 +104,9 @@ Wall-clock seconds of setup plus evolve, `std::chrono::steady_clock`, repeated i
 (pilot run, then 5-200 repetitions for about one second, a single repetition above 10 s);
 the median is reported, the minimum is in the CSV. One cell at a time per worker,
 `OMP_NUM_THREADS=1`. The sentinel cell (ROBER, FIRKODE s = 3, rtol 1e-6, 20 repetitions)
-runs before and after every family in every worker:
-
-<!-- begin generated: sentinel -->
-[pending]
-<!-- end generated -->
+runs before and after every family in every worker; its rows are in
+`results/<run-id>/sentinel.csv`, and `make_report.py` writes their spread to
+`results/<run-id>/tables/sentinel.md`.
 
 ### 3.4 Fairness caveats
 
@@ -132,8 +130,10 @@ runs before and after every family in every worker:
 ### 3.5 Harness validation
 
 `--validate` replicates repository examples and tests and compares their counters with the
-answer files (direct linear solvers exactly, Krylov paths within a few percent); the sweeps
-run only if every replica passes.
+answer files by the criterion `test/testRunner` applies to them (integers within 10 percent,
+floats to 4 digits; Krylov paths within a stated relative tolerance); the table marks the
+replicas that match exactly, as the direct-solver replicas do on the platform that generated
+the answer files. The sweeps run only if every replica passes.
 
 <!-- begin generated: validation -->
 [pending]

@@ -198,6 +198,7 @@ struct TimedCallbacks
   Problem* inner = nullptr;
   void* udata    = nullptr;
   ProfileStats* stats;
+  RhsSplit split; // the inner problem's splitting selected by --split
 };
 
 namespace timed {
@@ -265,6 +266,86 @@ inline int roots(sunrealtype t, N_Vector y, sunrealtype* gout, void* ud)
   return c->inner->roots()(t, y, gout, c->udata);
 }
 
+// The pieces of a splitting count as right-hand sides, its Jacobian as a
+// Jacobian and its preconditioner as linear algebra
+inline int timed_rhs(FIRKRhsFn f, sunrealtype t, N_Vector y, N_Vector ydot,
+                     TimedCallbacks* c)
+{
+  const auto t0  = clock::now();
+  const int flag = f(t, y, ydot, c->udata);
+  c->stats->t_rhs += seconds_since(t0);
+  c->stats->n_rhs++;
+  return flag;
+}
+
+inline int split_fe(sunrealtype t, N_Vector y, N_Vector ydot, void* ud)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  return timed_rhs(c->split.fe, t, y, ydot, c);
+}
+
+inline int split_fi(sunrealtype t, N_Vector y, N_Vector ydot, void* ud)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  return timed_rhs(c->split.fi, t, y, ydot, c);
+}
+
+inline int split_ff(sunrealtype t, N_Vector y, N_Vector ydot, void* ud)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  return timed_rhs(c->split.ff, t, y, ydot, c);
+}
+
+inline int split_jac(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
+                     void* ud, N_Vector t1, N_Vector t2, N_Vector t3)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  const auto t0     = clock::now();
+  const int flag    = c->split.jac_i(t, y, fy, J, c->udata, t1, t2, t3);
+  c->stats->t_jac += seconds_since(t0);
+  c->stats->n_jac++;
+  return flag;
+}
+
+inline int split_jtimes(N_Vector v, N_Vector Jv, sunrealtype t, N_Vector y,
+                        N_Vector fy, void* ud, N_Vector tmp)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  return c->split.jtimes_i(v, Jv, t, y, fy, c->udata, tmp);
+}
+
+inline int split_psetup(sunrealtype t, N_Vector y, N_Vector fy,
+                        sunbooleantype jok, sunbooleantype* jcur,
+                        sunrealtype gamma, void* ud)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  const auto t0     = clock::now();
+  const int flag    = c->split.psetup_i(t, y, fy, jok, jcur, gamma, c->udata);
+  c->stats->t_setup += seconds_since(t0);
+  c->stats->n_setup++;
+  return flag;
+}
+
+inline int split_psolve(sunrealtype t, N_Vector y, N_Vector fy, N_Vector r,
+                        N_Vector z, sunrealtype gamma, sunrealtype delta,
+                        int lr, void* ud)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  const auto t0     = clock::now();
+  const int flag = c->split.psolve_i(t, y, fy, r, z, gamma, delta, lr, c->udata);
+  c->stats->t_solve += seconds_since(t0);
+  c->stats->n_solve++;
+  return flag;
+}
+
+inline int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lr,
+                   sunrealtype* li, void* ud, N_Vector t1, N_Vector t2,
+                   N_Vector t3)
+{
+  TimedCallbacks* c = static_cast<TimedCallbacks*>(ud);
+  return c->inner->dom_eig()(t, y, fn, lr, li, c->udata, t1, t2, t3);
+}
+
 } // namespace timed
 
 // Problem decorator whose callbacks time the inner problem's right-hand
@@ -298,6 +379,8 @@ public:
     inner_->prepare(o);
     spec_     = inner_->spec();
     cb_.udata = inner_->user_data();
+    // the trampolines forward to one splitting, the one the run uses
+    if (!o.split.empty()) { cb_.split = find_split(*inner_, o.split); }
   }
 
   void init(N_Vector y0) const override { inner_->init(y0); }
@@ -348,6 +431,30 @@ public:
   void restart_update(sunrealtype t, N_Vector y) const override
   {
     inner_->restart_update(t, y);
+  }
+
+  // Only the selected splitting, with timed pieces (the user data of every
+  // callback is the TimedCallbacks, never the inner problem's data)
+  std::vector<RhsSplit> splits() const override
+  {
+    if (cb_.split.name.empty()) { return {}; }
+    const RhsSplit& in = cb_.split;
+    RhsSplit s;
+    s.name     = in.name;
+    s.fe       = in.fe ? timed::split_fe : nullptr;
+    s.fi       = in.fi ? timed::split_fi : nullptr;
+    s.ff       = in.ff ? timed::split_ff : nullptr;
+    s.jac_i    = in.jac_i ? timed::split_jac : nullptr;
+    s.jtimes_i = in.jtimes_i ? timed::split_jtimes : nullptr;
+    s.psetup_i = in.psetup_i ? timed::split_psetup : nullptr;
+    s.psolve_i = in.psolve_i ? timed::split_psolve : nullptr;
+    s.linear_i = in.linear_i;
+    return {s};
+  }
+
+  DomEigFn dom_eig() const override
+  {
+    return inner_->dom_eig() ? timed::dom_eig : nullptr;
   }
 
 private:

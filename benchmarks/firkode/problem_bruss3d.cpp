@@ -31,6 +31,7 @@
  * --pert (amplitude, default 0.1).
  * -----------------------------------------------------------------*/
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <vector>
@@ -234,6 +235,150 @@ int bruss_jac(sunrealtype, N_Vector y, N_Vector, SUNMatrix J, void* user_data,
   return 0;
 }
 
+// IMEX splitting "imex": the reaction is explicit, the diffusion implicit
+// (linear with a constant Jacobian). Separate functions, so that the
+// unsplit right-hand side and Jacobian keep their rounding.
+int bruss_reaction(sunrealtype, N_Vector y, N_Vector ydot, void* user_data)
+{
+  const BrussData* d   = static_cast<BrussData*>(user_data);
+  const sunrealtype* Y = N_VGetArrayPointer(y);
+  sunrealtype* F       = N_VGetArrayPointer(ydot);
+  const long nn        = d->n * d->n * d->n;
+  for (long m = 0; m < nn; m++)
+  {
+    const sunrealtype u = Y[2 * m], v = Y[2 * m + 1];
+    F[2 * m]     = BRUSS_A + u * u * v - (BRUSS_B + ONE) * u;
+    F[2 * m + 1] = BRUSS_B * u - u * u * v;
+  }
+  return 0;
+}
+
+int bruss_diffusion(sunrealtype, N_Vector y, N_Vector ydot, void* user_data)
+{
+  const BrussData* d   = static_cast<BrussData*>(user_data);
+  const sunrealtype* Y = N_VGetArrayPointer(y);
+  sunrealtype* F       = N_VGetArrayPointer(ydot);
+  const long n         = d->n;
+  const sunrealtype c  = d->alpha / (d->dx * d->dx);
+  for (long k = 0; k < n; k++)
+  {
+    for (long j = 0; j < n; j++)
+    {
+      for (long i = 0; i < n; i++)
+      {
+        const long m = node(*d, i, j, k);
+        long ilo, ihi, jlo, jhi, klo, khi;
+        axis_neighbours(i, n, ilo, ihi);
+        axis_neighbours(j, n, jlo, jhi);
+        axis_neighbours(k, n, klo, khi);
+        sunrealtype lu = -SUN_RCONST(6.0) * Y[2 * m];
+        sunrealtype lv = -SUN_RCONST(6.0) * Y[2 * m + 1];
+        for (long nb :
+             {node(*d, ilo, j, k), node(*d, ihi, j, k), node(*d, i, jlo, k),
+              node(*d, i, jhi, k), node(*d, i, j, klo), node(*d, i, j, khi)})
+        {
+          lu += Y[2 * nb];
+          lv += Y[2 * nb + 1];
+        }
+        F[2 * m]     = c * lu;
+        F[2 * m + 1] = c * lv;
+      }
+    }
+  }
+  return 0;
+}
+
+// The Jacobian of the diffusion on the pattern of bruss_jac: the 2 x 2 node
+// block holds -6c on its diagonal and explicit zeros off it, so that KLU
+// sees the same pattern
+int bruss_jac_diffusion(sunrealtype, N_Vector, N_Vector, SUNMatrix J,
+                        void* user_data, N_Vector, N_Vector, N_Vector)
+{
+  const BrussData* d  = static_cast<BrussData*>(user_data);
+  const long n        = d->n;
+  const sunrealtype c = d->alpha / (d->dx * d->dx);
+  const bool sparse   = SUNMatGetID(J) == SUNMATRIX_SPARSE;
+  sunindextype *ptrs = nullptr, *vals = nullptr;
+  sunrealtype* data = nullptr;
+  if (sparse)
+  {
+    if (SUNSparseMatrix_SparseType(J) != SUN_CSR_MAT) { return -1; }
+    ptrs = SUNSparseMatrix_IndexPointers(J);
+    vals = SUNSparseMatrix_IndexValues(J);
+    data = SUNSparseMatrix_Data(J);
+  }
+  else { SUNMatZero(J); }
+  auto put = [&](sunindextype& nz, sunindextype r, sunindextype col, sunrealtype v)
+  {
+    if (sparse)
+    {
+      vals[nz]   = col;
+      data[nz++] = v;
+    }
+    else if (SUNMatGetID(J) == SUNMATRIX_DENSE) { SM_ELEMENT_D(J, r, col) = v; }
+    else { SM_ELEMENT_B(J, r, col) = v; }
+  };
+  std::vector<long> cols;
+  std::vector<sunrealtype> wts;
+  sunindextype nz = 0;
+  for (long k = 0; k < n; k++)
+  {
+    for (long j = 0; j < n; j++)
+    {
+      for (long i = 0; i < n; i++)
+      {
+        const long m = node(*d, i, j, k);
+        neighbour_nodes(*d, i, j, k, cols, wts);
+        for (int comp = 0; comp < 2; comp++)
+        {
+          const sunindextype row = 2 * m + comp;
+          if (sparse) { ptrs[row] = nz; }
+          size_t q = 0;
+          for (; q < cols.size() && cols[q] < m; q++)
+          {
+            put(nz, row, 2 * cols[q] + comp, c * wts[q]);
+          }
+          put(nz, row, 2 * m, comp == 0 ? -SUN_RCONST(6.0) * c : ZERO);
+          put(nz, row, 2 * m + 1, comp == 1 ? -SUN_RCONST(6.0) * c : ZERO);
+          for (; q < cols.size(); q++)
+          {
+            put(nz, row, 2 * cols[q] + comp, c * wts[q]);
+          }
+        }
+      }
+    }
+  }
+  if (sparse) { ptrs[2 * n * n * n] = nz; }
+  return 0;
+}
+
+// Gershgorin bound of the spectrum of the full Jacobian: every row's
+// diagonal entry plus the sum of its off-diagonal moduli (6c for the
+// neighbours, the reflection keeps the weights summing to 6)
+int bruss_dom_eig(sunrealtype, N_Vector y, N_Vector, sunrealtype* lambdaR,
+                  sunrealtype* lambdaI, void* user_data, N_Vector, N_Vector,
+                  N_Vector)
+{
+  const BrussData* d   = static_cast<BrussData*>(user_data);
+  const sunrealtype* Y = N_VGetArrayPointer(y);
+  const long nn        = d->n * d->n * d->n;
+  const sunrealtype c  = d->alpha / (d->dx * d->dx);
+  sunrealtype rho      = ZERO;
+  for (long m = 0; m < nn; m++)
+  {
+    const sunrealtype u = Y[2 * m], v = Y[2 * m + 1];
+    const sunrealtype ru =
+      std::fabs(TWO * u * v - (BRUSS_B + ONE) - SUN_RCONST(6.0) * c) +
+      SUN_RCONST(6.0) * c + u * u;
+    const sunrealtype rv = std::fabs(-u * u - SUN_RCONST(6.0) * c) +
+                           SUN_RCONST(6.0) * c + std::fabs(BRUSS_B - TWO * u * v);
+    rho = std::max(rho, std::max(ru, rv));
+  }
+  *lambdaR = -rho;
+  *lambdaI = ZERO;
+  return 0;
+}
+
 class Bruss3D : public Problem
 {
 public:
@@ -310,6 +455,19 @@ public:
   FIRKRhsFn rhs() const override { return bruss_rhs; }
 
   FIRKLsJacFn jac() const override { return bruss_jac; }
+
+  std::vector<RhsSplit> splits() const override
+  {
+    RhsSplit imex;
+    imex.name     = "imex";
+    imex.fe       = bruss_reaction;
+    imex.fi       = bruss_diffusion;
+    imex.jac_i    = bruss_jac_diffusion;
+    imex.linear_i = true;
+    return {imex};
+  }
+
+  DomEigFn dom_eig() const override { return bruss_dom_eig; }
 
 private:
   BrussData d_;

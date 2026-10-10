@@ -206,6 +206,32 @@ int sector_rhs(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   return 0;
 }
 
+// The eigenvalue pair of largest modulus, rmax (-cos theta +- i sin theta)
+// (Q is orthogonal); with the quadratic term the real part is widened by
+// 2 |nonlin| max |y - phi| (a Gershgorin bound of the diagonal term)
+int sector_dom_eig(sunrealtype t, N_Vector y, N_Vector, sunrealtype* lambdaR,
+                   sunrealtype* lambdaI, void* user_data, N_Vector, N_Vector,
+                   N_Vector)
+{
+  SectorData* d    = static_cast<SectorData*>(user_data);
+  sunrealtype rmax = ZERO;
+  for (sunrealtype rk : d->r) { rmax = std::max(rmax, rk); }
+  sunrealtype widen = ZERO;
+  if (d->nonlin != ZERO)
+  {
+    const sunrealtype* Y = N_VGetArrayPointer(y);
+    forcing(*d, t, d->phi.data(), d->dphi.data());
+    for (sunindextype j = 0; j < d->N; j++)
+    {
+      widen = std::max(widen, std::fabs(Y[j] - d->phi[(size_t)j]));
+    }
+    widen *= TWO * std::fabs(d->nonlin);
+  }
+  *lambdaR = -rmax * d->c - widen;
+  *lambdaI = rmax * d->s;
+  return 0;
+}
+
 void matrix_set(SUNMatrix J, sunindextype i, sunindextype j, sunrealtype v)
 {
   if (SUNMatGetID(J) == SUNMATRIX_DENSE) { SM_ELEMENT_D(J, i, j) = v; }
@@ -348,13 +374,14 @@ public:
       }
     }
 
-    spec_.N          = N;
-    spec_.mu         = d_.coupled ? N - 1 : 1;
-    spec_.ml         = spec_.mu;
-    spec_.ls_default = d_.coupled ? LinSolKind::Dense : LinSolKind::Band;
-    spec_.linear     = d_.nonlin == ZERO;
-    spec_.has_exact  = d_.square ? (d_.nonlin == ZERO)
-                                 : (d_.nonlin == ZERO || d_.delta == ZERO);
+    spec_.N             = N;
+    spec_.mu            = d_.coupled ? N - 1 : 1;
+    spec_.ml            = spec_.mu;
+    spec_.ls_default    = d_.coupled ? LinSolKind::Dense : LinSolKind::Band;
+    spec_.linear        = d_.nonlin == ZERO;
+    spec_.dom_eig_const = d_.nonlin == ZERO;
+    spec_.has_exact     = d_.square ? (d_.nonlin == ZERO)
+                                    : (d_.nonlin == ZERO || d_.delta == ZERO);
   }
 
   void init(N_Vector y0) const override
@@ -378,6 +405,8 @@ public:
   FIRKRhsFn rhs() const override { return sector_rhs; }
 
   FIRKLsJacFn jac() const override { return sector_jac; }
+
+  DomEigFn dom_eig() const override { return sector_dom_eig; }
 
   int exact(sunrealtype t, N_Vector y) const override
   {

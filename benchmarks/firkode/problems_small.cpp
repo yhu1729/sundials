@@ -353,6 +353,16 @@ int analytic_jac(sunrealtype, N_Vector, N_Vector, SUNMatrix J, void* user_data,
   return 0;
 }
 
+// The Jacobian of analytic and pr is lambda I
+int lambda_dom_eig(sunrealtype, N_Vector, N_Vector, sunrealtype* lambdaR,
+                   sunrealtype* lambdaI, void* user_data, N_Vector, N_Vector,
+                   N_Vector)
+{
+  *lambdaR = *static_cast<sunrealtype*>(user_data);
+  *lambdaI = ZERO;
+  return 0;
+}
+
 int analytic_exact(sunrealtype t, N_Vector y)
 {
   NV_Ith_S(y, 0) = std::atan(t);
@@ -364,17 +374,18 @@ class Analytic : public Problem
 public:
   Analytic()
   {
-    spec_.name         = "analytic";
-    spec_.N            = 1;
-    spec_.t0           = ZERO;
-    spec_.tf           = SUN_RCONST(10.0);
-    spec_.rtol_default = SUN_RCONST(1.0e-6);
-    spec_.atol_default = SUN_RCONST(1.0e-10);
-    spec_.ls_default   = LinSolKind::Dense;
-    spec_.has_jac      = true;
-    spec_.has_exact    = true;
-    spec_.linear       = true;
-    spec_.symmetric    = true;
+    spec_.name          = "analytic";
+    spec_.N             = 1;
+    spec_.t0            = ZERO;
+    spec_.tf            = SUN_RCONST(10.0);
+    spec_.rtol_default  = SUN_RCONST(1.0e-6);
+    spec_.atol_default  = SUN_RCONST(1.0e-10);
+    spec_.ls_default    = LinSolKind::Dense;
+    spec_.has_jac       = true;
+    spec_.has_exact     = true;
+    spec_.linear        = true;
+    spec_.symmetric     = true;
+    spec_.dom_eig_const = true;
   }
 
   void configure(const Options& o) override { lambda_ = (sunrealtype)o.lambda; }
@@ -386,6 +397,8 @@ public:
   FIRKRhsFn rhs() const override { return analytic_rhs; }
 
   FIRKLsJacFn jac() const override { return analytic_jac; }
+
+  DomEigFn dom_eig() const override { return lambda_dom_eig; }
 
   int exact(sunrealtype t, N_Vector y) const override
   {
@@ -417,6 +430,7 @@ public:
     spec_.has_exact     = true;
     spec_.linear        = true;
     spec_.symmetric     = true;
+    spec_.dom_eig_const = true;
   }
 
   void configure(const Options& o) override
@@ -435,6 +449,8 @@ public:
   FIRKRhsFn rhs() const override { return problems::pr::ode_rhs; }
 
   FIRKLsJacFn jac() const override { return problems::pr::ode_rhs_jac; }
+
+  DomEigFn dom_eig() const override { return lambda_dom_eig; }
 
   int exact(sunrealtype t, N_Vector y) const override
   {
@@ -482,6 +498,18 @@ public:
 
   FIRKLsJacFn jac() const override { return problems::kpr::ode_rhs_jac; }
 
+  // the IMEX splitting of test/unit_tests/problems/kpr.hpp (ARKODE logging
+  // tests), used by the validation
+  std::vector<RhsSplit> splits() const override
+  {
+    RhsSplit imex;
+    imex.name  = "imex";
+    imex.fe    = problems::kpr::ode_rhs_ex;
+    imex.fi    = problems::kpr::ode_rhs_im;
+    imex.jac_i = problems::kpr::ode_rhs_jac_im;
+    return {imex};
+  }
+
   int exact(sunrealtype t, N_Vector y) const override
   {
     return kpr_exact(t, y);
@@ -501,6 +529,7 @@ std::unique_ptr<Problem> make_beam();
 std::unique_ptr<Problem> make_plate();
 std::unique_ptr<Problem> make_detest_b5();
 std::unique_ptr<Problem> make_bruss3d();
+std::unique_ptr<Problem> make_kprmri();
 
 std::unique_ptr<Problem> make_problem(const std::string& name)
 {
@@ -522,6 +551,7 @@ std::unique_ptr<Problem> make_problem(const std::string& name)
   if (name == "plate") { return make_plate(); }
   if (name == "detest_b5") { return make_detest_b5(); }
   if (name == "bruss3d") { return make_bruss3d(); }
+  if (name == "kprmri") { return make_kprmri(); }
   throw std::runtime_error("unknown problem: " + name);
 }
 

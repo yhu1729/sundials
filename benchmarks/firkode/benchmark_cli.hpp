@@ -37,7 +37,8 @@ enum class Mode
   FixedStep,
   OneStep,
   Roots,
-  Dense
+  Dense,
+  Steps // a fixed number of internal steps towards tf (--steps K)
 };
 
 struct Options
@@ -93,6 +94,27 @@ struct Options
   // ARKODE extras
   bool arkode_linear = false;
   int ark_predictor  = -1;
+  std::string ark_itable; // ARKStep implicit table by name ("" = from --order)
+  bool ark_optimal = false; // ARKStepSetOptimalParams (deprecated tuned sets)
+  std::string ark_etable;   // ARKStep explicit table by name (arkode-imex)
+  std::string split;        // additive splitting of f (arkode-imex, arkode-mri)
+
+  // LSRKStep (arkode-lsrk)
+  std::string lsrk_method = "rkc2"; // rkc2|rkl2
+  std::string dom_eig     = "user"; // user (the problem's bound)|power
+  long dom_eig_freq       = -1;     // -1: once for a constant bound, else 25
+  int lsrk_max_stages     = 0;      // 0 = ARKODE default
+  double dom_eig_safety   = -1.0;   // <= 0 = ARKODE default
+
+  // MRIStep (arkode-mri)
+  std::string mri_table;      // slow coupling by name ("" = default)
+  std::string mri_fast_table; // fast explicit table by name ("" = default)
+  double mri_fast_h          = 0.0;         // fixed fast step (0 = adaptive)
+  std::string mri_controller = "decoupled"; // decoupled|htol
+
+  // checks instead of a run
+  bool check_split  = false; // the pieces of --split add up to f
+  bool check_domeig = false; // dom_eig() against the power iteration
 
   // limits and interval
   long maxsteps = 10000000;
@@ -110,6 +132,7 @@ struct Options
   double fixed_h    = 0.0;
   double h_one      = 0.0;
   int dense_k       = 0;
+  int steps         = 0;
 
   // Jacobian dump (spectrum analysis with scripts/spectrum.py)
   std::vector<double> dump_times; // --dump-jac t1,t2,...
@@ -232,8 +255,8 @@ inline void usage(std::FILE* fp)
             "Usage: firkode_benchmark --problem P --integrator I [options]\n"
             "  P: "
             "rober|vdpol|orego|hires|analytic|pr|kpr|diurnal|heat2d|heat1dfem|"
-            "sector|wave1dfem|pollu|ringmod|beam|plate|bruss3d\n"
-            "  I: firkode|cvode|arkode|ida\n"
+            "sector|wave1dfem|pollu|ringmod|beam|plate|bruss3d|kprmri\n"
+            "  I: firkode|cvode|arkode|arkode-imex|arkode-lsrk|arkode-mri|ida\n"
             "Tolerances: --rtol R --atol A --atol-vec a1,a2,...\n"
             "Method:     --stages S (firkode, 3 only) --order Q (arkode DIRK "
             "order; cvode/ida max order)\n"
@@ -253,11 +276,22 @@ inline void usage(std::FILE* fp)
             "            --controller NAME --impgus-k K1 K2 --mode "
             "beginner|expert\n"
             "CVODE:      --stald (stability-limit detection)\n"
-            "ARKODE:     --arkode-linear --ark-predictor P\n"
+            "ARKODE:     --arkode-linear --ark-predictor P --ark-itable NAME "
+            "--ark-optimal\n"
+            "            --split NAME (arkode-imex, arkode-mri) --ark-etable "
+            "NAME\n"
+            "            --lsrk-method rkc2|rkl2 --dom-eig user|power "
+            "--dom-eig-freq N\n"
+            "            --lsrk-max-stages S --dom-eig-safety F (arkode-lsrk)\n"
+            "            --mri-table NAME --mri-fast-table NAME --mri-fast-h "
+            "H\n"
+            "            --mri-controller decoupled|htol (arkode-mri)\n"
+            "Checks:     --check-split (with --split) --check-domeig\n"
             "Limits:     --maxsteps N --maxnef N --h0 H --tf T --grid K\n"
             "            --grid-geom T1 MULT --no-tstop\n"
             "Modes:      --fixed-h H | --one-step --h H | --roots | --dense-k "
             "K\n"
+            "            --steps K (K internal steps towards tf; no errors)\n"
             "            --restart-every K (K equal intervals with a re-init "
             "between them)\n"
             "            --order-hist (BDF order histogram; untimed, "
@@ -333,6 +367,21 @@ inline Options parse_args(int argc, char* argv[])
   o.stald         = flag(args, "--stald");
   o.arkode_linear = flag(args, "--arkode-linear");
   take(args, "--ark-predictor", o.ark_predictor);
+  take(args, "--ark-itable", o.ark_itable);
+  o.ark_optimal = flag(args, "--ark-optimal");
+  take(args, "--ark-etable", o.ark_etable);
+  take(args, "--split", o.split);
+  take(args, "--lsrk-method", o.lsrk_method);
+  take(args, "--dom-eig", o.dom_eig);
+  take(args, "--dom-eig-freq", o.dom_eig_freq);
+  take(args, "--lsrk-max-stages", o.lsrk_max_stages);
+  take(args, "--dom-eig-safety", o.dom_eig_safety);
+  take(args, "--mri-table", o.mri_table);
+  take(args, "--mri-fast-table", o.mri_fast_table);
+  take(args, "--mri-fast-h", o.mri_fast_h);
+  take(args, "--mri-controller", o.mri_controller);
+  o.check_split  = flag(args, "--check-split");
+  o.check_domeig = flag(args, "--check-domeig");
   take(args, "--maxsteps", o.maxsteps);
   take(args, "--maxnef", o.maxnef);
   take(args, "--h0", o.h0);
@@ -351,8 +400,10 @@ inline Options parse_args(int argc, char* argv[])
   bool one_step = flag(args, "--one-step");
   take(args, "--h", o.h_one);
   take(args, "--dense-k", o.dense_k);
+  take(args, "--steps", o.steps);
   bool roots = flag(args, "--roots");
-  int nmodes = (o.fixed_h > 0.0) + one_step + roots + (o.dense_k > 0);
+  int nmodes = (o.fixed_h > 0.0) + one_step + roots + (o.dense_k > 0) +
+               (o.steps > 0);
   if (nmodes > 1) { throw std::runtime_error("modes are mutually exclusive"); }
   if (o.fixed_h > 0.0) { o.mode = Mode::FixedStep; }
   else if (one_step)
@@ -362,6 +413,7 @@ inline Options parse_args(int argc, char* argv[])
   }
   else if (roots) { o.mode = Mode::Roots; }
   else if (o.dense_k > 0) { o.mode = Mode::Dense; }
+  else if (o.steps > 0) { o.mode = Mode::Steps; }
 
   if (take(args, "--dump-jac", s))
   {

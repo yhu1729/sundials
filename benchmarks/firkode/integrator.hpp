@@ -164,6 +164,23 @@ inline LinSys make_mass_linsys(const ProblemSpec& spec, N_Vector y,
   return ls;
 }
 
+// ARKODE's name of a --controller value (ARKodeSetAdaptControllerByName)
+inline std::string arkode_controller_name(const std::string& lower)
+{
+  if (lower == "impgus") { return "ImpGus"; }
+  if (lower == "expgus") { return "ExpGus"; }
+  if (lower == "imexgus") { return "ImExGus"; }
+  if (lower == "i") { return "I"; }
+  if (lower == "pi") { return "PI"; }
+  if (lower == "pid") { return "PID"; }
+  if (lower == "soderlind") { return "Soderlind"; }
+  if (lower == "h0211") { return "H0211"; }
+  if (lower == "h0321") { return "H0321"; }
+  if (lower == "h211") { return "H211"; }
+  if (lower == "h312") { return "H312"; }
+  throw std::runtime_error("unknown controller: " + lower);
+}
+
 class Integrator
 {
 public:

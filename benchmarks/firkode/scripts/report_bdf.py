@@ -36,11 +36,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from benchmark_common import style_for, to_float  # noqa: E402
 from make_report import (  # noqa: E402
     at_floor,
-    by_label,
     fig_grid_wp,
     fmt,
     fmt_ms,
-    interp_log_time,
     label_sort_key,
     md_table,
     mescd,
@@ -49,63 +47,32 @@ from make_report import (  # noqa: E402
     status_of,
     wp_table,
 )
+from report_common import (  # noqa: E402
+    BASE,
+    best_ratio,
+    fig_profile,
+    groups_by_params,
+    is_bdf,
+    is_twin,
+    params_of,
+    pnum,
+    profile_table,
+    timed_rows,
+)
+from report_common import crossover_mescd as class_crossover_mescd  # noqa: E402
+from report_common import ratio_cells as class_ratio_cells  # noqa: E402
 
 TARGETS = (4.0, 6.0, 8.0)
-BASE = "FIRKODE s=3"
-
-
-def timed_rows(rows):
-    """Rows that may enter a timing comparison."""
-    return [r for r in rows if "[" not in r.get("label", "")]
-
-
-def params_of(r) -> dict:
-    out = {}
-    for kv in r.get("params", "").split(";"):
-        if "=" in kv:
-            k, v = kv.split("=", 1)
-            out[k] = v
-    return out
-
-
-def pnum(r, key, default=math.nan) -> float:
-    v = params_of(r).get(key)
-    return to_float(v) if v is not None else default
-
-
-def groups_by_params(rows, keys):
-    out = defaultdict(list)
-    for r in rows:
-        p = params_of(r)
-        out[tuple(p.get(k, "") for k in keys)].append(r)
-    return out
 
 
 def best_bdf_ratio(rows, target, base=BASE):
-    """(ratio, label) of the fastest BDF configuration against the base at
-    the target mescd; NaN when either side lacks data."""
-    groups = by_label(ok_rows(timed_rows(rows)))
-    if base not in groups:
-        return math.nan, ""
-    tb = interp_log_time(groups[base], target)
-    best, best_label = math.nan, ""
-    for label, g in groups.items():
-        if label.startswith("FIRKODE"):
-            continue
-        t = interp_log_time(g, target)
-        if not math.isnan(t) and (math.isnan(best) or t < best):
-            best, best_label = t, label
-    if math.isnan(best) or math.isnan(tb):
-        return math.nan, best_label
-    return best / tb, best_label
+    """(ratio, label) of the fastest BDF configuration (CVODE or IDA)
+    against the base at the target mescd; NaN when either side lacks data."""
+    return best_ratio(rows, target, is_bdf, base)
 
 
 def ratio_cells(rows):
-    cells = []
-    for t in TARGETS:
-        ratio, label = best_bdf_ratio(rows, t)
-        cells.append("NA" if math.isnan(ratio) else fmt(ratio, 3) + f" ({label})")
-    return cells
+    return class_ratio_cells(rows, is_bdf, TARGETS)
 
 
 def order_summary(rows, rtol, label):
@@ -194,7 +161,7 @@ def b8_tables(rows, figdir, plt):
                 series[(float(rmax), t)].append((float(theta), ratio))
     tables["B8_ratio_theta"] = md_table(header, out) if out else "(no B8 data)\n"
     tables["B8_orders"] = order_table(rows)
-    other = [r for r in rows if r not in main and "[" not in r.get("label", "")]
+    other = [r for r in rows if r not in main and not is_twin(r.get("label", ""))]
     if other:
         tables["B8_variants"] = wp_table(other, [1e-6, 1e-8], extra_cols=("params", "nsli"))
     if plt is not None and series:
@@ -423,77 +390,9 @@ def b11_tables(rows, figdir, plt):
 def b12_tables(rows, figdir, plt):
     tables = {"B12_ratio": problem_ratio_table(timed_rows(rows))}
     tables["B12_wp"] = wp_table(timed_rows(rows), None, extra_cols=("params", "nsli"))
-    header = [
-        "problem",
-        "params",
-        "method",
-        "rtol",
-        "steps",
-        "setups",
-        "Jac",
-        "t_setup (s)",
-        "t_solve (s)",
-        "t_rhs (s)",
-        "t_jac (s)",
-        "wall (s)",
-        "setup share",
-    ]
-    out = []
-    bars = []
-    for r in sorted(
-        [r for r in rows if "[profile]" in r.get("label", "") and r.get("driver_flag") == "ok"],
-        key=lambda r: (
-            r.get("problem", ""),
-            to_float(params_of(r).get("n", params_of(r).get("mx", "0"))),
-            label_sort_key(r["label"]),
-        ),
-    ):
-        ts, tso, tr, tj, tp = (
-            to_float(r.get(k)) for k in ("t_setup", "t_solve", "t_rhs", "t_jac", "t_profiled")
-        )
-        out.append(
-            [
-                r.get("problem", ""),
-                r.get("params", ""),
-                r["label"].replace(" [profile]", ""),
-                f"{to_float(r.get('rtol')):.0e}",
-                r.get("nst", "NA"),
-                r.get("nsetups", "NA"),
-                r.get("nje", "NA"),
-                fmt(ts, 3),
-                fmt(tso, 3),
-                fmt(tr, 3),
-                fmt(tj, 3),
-                fmt(tp, 3),
-                fmt(ts / tp, 3) if tp > 0 else "NA",
-            ]
-        )
-        bars.append(
-            (
-                f"{r.get('problem', '')} {r.get('params', '')}\n{r['label'].replace(' [profile]', '')}",
-                ts,
-                tso,
-                tr,
-                tj,
-                max(tp - ts - tso - tr - tj, 0.0),
-            )
-        )
-    tables["B12_profile"] = md_table(header, out) if out else "(no profiled runs)\n"
-    if plt is not None and bars:
-        fig, ax = plt.subplots(figsize=(max(6, 0.6 * len(bars)), 4.5))
-        x = list(range(len(bars)))
-        bottom = [0.0] * len(bars)
-        for idx, name in ((1, "setup"), (2, "solve"), (3, "rhs"), (4, "jac"), (5, "other")):
-            vals = [b[idx] for b in bars]
-            ax.bar(x, vals, bottom=bottom, label=name)
-            bottom = [b + v for b, v in zip(bottom, vals)]
-        ax.set_xticks(x)
-        ax.set_xticklabels([b[0] for b in bars], rotation=90, fontsize=6)
-        ax.set_ylabel("seconds (profiled run, rtol 1e-6)")
-        ax.legend(loc="best")
-        fig.tight_layout()
-        fig.savefig(Path(figdir) / "bdf_bruss3d_profile.png", dpi=150)
-        plt.close(fig)
+    tables["B12_profile"] = profile_table(rows)
+    if plt is not None:
+        fig_profile(plt, rows, Path(figdir) / "bdf_bruss3d_profile.png")
     return tables
 
 
@@ -501,17 +400,7 @@ def crossover_mescd(rows, base=BASE):
     """Accuracy at which the best BDF time equals the FIRKODE time, by linear
     interpolation of log(ratio) over the targets 8..13; NaN when the ratio
     never crosses 1."""
-    pts = []
-    for t in (8.0, 9.0, 10.0, 11.0, 12.0, 13.0):
-        ratio, _ = best_bdf_ratio(rows, t, base)
-        if not math.isnan(ratio):
-            pts.append((t, math.log10(ratio)))
-    for (t0, r0), (t1, r1) in zip(pts, pts[1:]):
-        if (r0 < 0) != (r1 < 0) or r0 == 0:
-            if r1 == r0:
-                return t0
-            return t0 + (0 - r0) / (r1 - r0) * (t1 - t0)
-    return math.nan
+    return class_crossover_mescd(rows, is_bdf, base=base)
 
 
 def b13_tables(rows, figdir, plt):

@@ -69,6 +69,7 @@ ATOL_FACTOR = {
     "plate": 1.0e-3,
     "detest_b5": 1.0,
     "bruss3d": 1.0e-2,
+    "kprmri": 1.0e-4,
 }
 
 # Reference-solution tolerance per problem (FIRKODE s=3, cross-checked
@@ -595,6 +596,69 @@ def tool_version(cmd: list) -> str:
         return "unavailable"
 
 
+def linux_cpu_model(cpuinfo: str | None = None) -> str:
+    """The CPU model on Linux: the first "model name" of /proc/cpuinfo (x86),
+    else the "Model name:" line of lscpu (aarch64 kernels omit the former)."""
+    try:
+        text = cpuinfo if cpuinfo is not None else Path("/proc/cpuinfo").read_text()
+    except OSError:
+        text = ""
+    for line in text.splitlines():
+        key, sep, value = line.partition(":")
+        if sep and key.strip() == "model name" and value.strip():
+            return value.strip()
+    if cpuinfo is not None:
+        return "unavailable"
+    try:
+        out = subprocess.run(
+            ["lscpu"], capture_output=True, text=True, check=True, timeout=5
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return "unavailable"
+    for line in out.splitlines():
+        key, sep, value = line.partition(":")
+        if sep and key.strip() == "Model name" and value.strip():
+            return value.strip()
+    return "unavailable"
+
+
+def linux_memory_bytes() -> str:
+    try:
+        return str(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES"))
+    except (ValueError, OSError):
+        return "unavailable"
+
+
+def linux_os_release() -> str:
+    try:
+        return platform.freedesktop_os_release().get("PRETTY_NAME", "unavailable")
+    except OSError:
+        return "unavailable"
+
+
+def machine_facts() -> dict:
+    """CPU model, memory and OS version by platform (sysctl and sw_vers on
+    macOS, /proc and os-release on Linux); a failed lookup is "unavailable"."""
+    system = platform.system()
+    if system == "Linux":
+        return {
+            "os": system,
+            "cpu_brand": linux_cpu_model(),
+            "memory_bytes": linux_memory_bytes(),
+            "os_version": linux_os_release(),
+        }
+    return {
+        "os": system,
+        "cpu_brand": sysctl("machdep.cpu.brand_string"),
+        "perf_levels": {
+            "performance_cores": sysctl("hw.perflevel0.physicalcpu"),
+            "efficiency_cores": sysctl("hw.perflevel1.physicalcpu"),
+        },
+        "memory_bytes": sysctl("hw.memsize"),
+        "os_version": tool_version(["sw_vers", "-productVersion"]),
+    }
+
+
 def binary_version(binary: Path) -> str:
     """The --version output of a firkode_benchmark binary (or why it is unavailable)."""
     try:
@@ -629,14 +693,8 @@ def collect_provenance(binary: Path, build_dir: Path, repo: Path, env: dict) -> 
         "hostname": platform.node(),
         "platform": platform.platform(),
         "machine": platform.machine(),
-        "cpu_brand": sysctl("machdep.cpu.brand_string"),
         "cpu_count": os.cpu_count(),
-        "perf_levels": {
-            "performance_cores": sysctl("hw.perflevel0.physicalcpu"),
-            "efficiency_cores": sysctl("hw.perflevel1.physicalcpu"),
-        },
-        "memory_bytes": sysctl("hw.memsize"),
-        "os_version": tool_version(["sw_vers", "-productVersion"]),
+        **machine_facts(),
         "compiler": tool_version(["cc", "--version"]),
         "cmake": tool_version(["cmake", "--version"]),
         "git": git_info(repo),
@@ -701,6 +759,30 @@ STYLE = {
     "FIRKODE s=3 periodic msbp=20": dict(color=OKABE_ITO["sky"], marker="^", ls="-.", mfc="none"),
     "FIRKODE s=3 periodic msbp=50": dict(color=OKABE_ITO["sky"], marker="D", ls="-.", mfc="none"),
     "FIRKODE s=3 h0=1e-6": dict(color=OKABE_ITO["blue"], marker="*", ls="-", mfc="none"),
+    # the ARKODE configurations of BENCHMARK_ARKODE.md: DIRK orange and
+    # vermilion (dotted), IMEX sky (dash-dot), LSRK purple (dashed), MRI
+    # yellow (solid)
+    "ARKODE DIRK4 optimal": dict(color=OKABE_ITO["orange"], marker="*", ls="-.", mfc="full"),
+    "ARKODE DIRK5 optimal": dict(color=OKABE_ITO["vermilion"], marker="h", ls="-.", mfc="full"),
+    "ARKODE DIRK SDIRK_5_3_4": dict(color=OKABE_ITO["orange"], marker="s", ls=":", mfc="none"),
+    "ARKODE DIRK ESDIRK437L2SA_7_3_4": dict(
+        color=OKABE_ITO["orange"], marker="D", ls=":", mfc="none"
+    ),
+    "ARKODE DIRK KVAERNO_7_4_5": dict(
+        color=OKABE_ITO["vermilion"], marker="p", ls=":", mfc="none"
+    ),
+    "ARKODE DIRK ARK548L2SAb_DIRK_8_4_5": dict(
+        color=OKABE_ITO["vermilion"], marker="8", ls=":", mfc="none"
+    ),
+    "ARKODE IMEX3": dict(color=OKABE_ITO["sky"], marker="+", ls="-.", mfc="none"),
+    "ARKODE IMEX4": dict(color=OKABE_ITO["sky"], marker="*", ls="-.", mfc="none"),
+    "ARKODE IMEX5": dict(color=OKABE_ITO["sky"], marker="h", ls="-.", mfc="none"),
+    "ARKODE LSRK RKC2": dict(color=OKABE_ITO["purple"], marker="o", ls="--", mfc="none"),
+    "ARKODE LSRK RKL2": dict(color=OKABE_ITO["purple"], marker="s", ls="--", mfc="none"),
+    "ARKODE LSRK RKC2 power": dict(color=OKABE_ITO["purple"], marker="o", ls=":", mfc="full"),
+    "ARKODE MRI ESDIRK34a": dict(color=OKABE_ITO["yellow"], marker="^", ls="-", mfc="none"),
+    "ARKODE MRI ESDIRK34a htol": dict(color=OKABE_ITO["yellow"], marker="v", ls="-", mfc="full"),
+    "ARKODE MRI IMEX-SR32": dict(color=OKABE_ITO["yellow"], marker="D", ls="-", mfc="none"),
 }
 
 

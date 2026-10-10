@@ -46,7 +46,9 @@ struct Heat1DData
 };
 
 sunrealtype exact_pde(sunrealtype t, sunrealtype x)
-{ return std::exp(-t) * std::sin(PI * x); }
+{
+  return std::exp(-t) * std::sin(PI * x);
+}
 
 int heat1d_rhs(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
@@ -64,7 +66,7 @@ int heat1d_rhs(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
     const sunrealtype fc = c * std::sin(PI * dx * (sunrealtype)i);
     const sunrealtype fr = c * std::sin(PI * dx * (sunrealtype)(i + 1));
     Ydot[i]              = -k * (-Y[i - 1] + TWO * Y[i] - Y[i + 1]) / dx +
-                           dx * (fl + FOUR * fc + fr) / SIX;
+              dx * (fl + FOUR * fc + fr) / SIX;
   }
   return 0;
 }
@@ -159,6 +161,8 @@ private:
 } // namespace
 
 std::unique_ptr<Problem> make_heat1dfem()
-{ return std::unique_ptr<Problem>(new Heat1DFem()); }
+{
+  return std::unique_ptr<Problem>(new Heat1DFem());
+}
 
 } // namespace benchmark

@@ -138,20 +138,38 @@ struct RunStats
   double t_profiled        = nan_value(); // --profile: wall time of that run
   int profiled             = 0;
   int flag                 = 0;
+  // ARKODE steppers other than implicit ARKStep (NA elsewhere)
+  std::string split     = "NA"; // the splitting of f (arkode-imex, arkode-mri)
+  long nfe_e            = NA_LONG; // explicit (IMEX) or slow explicit (MRI) f
+  long nfe_f            = NA_LONG; // fast right-hand sides (MRI)
+  long nst_f            = NA_LONG; // fast steps (MRI)
+  long nst_f_att        = NA_LONG; // fast step attempts (MRI)
+  long netf_f           = NA_LONG; // fast error-test failures (MRI)
+  long ndomeig          = NA_LONG; // dominant-eigenvalue updates (LSRK)
+  long nfe_domeig       = NA_LONG; // f evaluations of the power iteration
+  long lsrk_max_stages  = NA_LONG; // most stages of a step (LSRK)
+  long nst_expstab      = NA_LONG; // steps limited by stability (ARKODE)
+  long nst_acc          = NA_LONG; // steps limited by accuracy (ARKODE)
+  double split_residual = nan_value(); // --check-split
+  double split_jac_err  = nan_value(); // --check-split
+  double domeig_ratio   = nan_value(); // --check-domeig
 };
 
 // Counters that are summed over the intervals of a restarted run
 inline const std::vector<long RunStats::*>& summed_counters()
 {
   static const std::vector<long RunStats::*> fields =
-    {&RunStats::nst,        &RunStats::nst_att,      &RunStats::nfe,
-     &RunStats::nfe_ls,     &RunStats::nsetups,      &RunStats::nje,
-     &RunStats::nni,        &RunStats::nncf,         &RunStats::nsf,
-     &RunStats::netf,       &RunStats::nstab,        &RunStats::nli,
-     &RunStats::nlcf,       &RunStats::npe,          &RunStats::nps,
-     &RunStats::njtv,       &RunStats::nsli,         &RunStats::nscf,
-     &RunStats::nbs,        &RunStats::nmass_setups, &RunStats::nmass_solves,
-     &RunStats::nmass_mult, &RunStats::ngeval};
+    {&RunStats::nst,         &RunStats::nst_att,      &RunStats::nfe,
+     &RunStats::nfe_ls,      &RunStats::nsetups,      &RunStats::nje,
+     &RunStats::nni,         &RunStats::nncf,         &RunStats::nsf,
+     &RunStats::netf,        &RunStats::nstab,        &RunStats::nli,
+     &RunStats::nlcf,        &RunStats::npe,          &RunStats::nps,
+     &RunStats::njtv,        &RunStats::nsli,         &RunStats::nscf,
+     &RunStats::nbs,         &RunStats::nmass_setups, &RunStats::nmass_solves,
+     &RunStats::nmass_mult,  &RunStats::ngeval,       &RunStats::nfe_e,
+     &RunStats::nfe_f,       &RunStats::nst_f,        &RunStats::nst_f_att,
+     &RunStats::netf_f,      &RunStats::ndomeig,      &RunStats::nfe_domeig,
+     &RunStats::nst_expstab, &RunStats::nst_acc};
   return fields;
 }
 
@@ -184,7 +202,10 @@ inline std::string csv_header()
          "dense_err_abs_max,hlast,ele_wrms,ele_max,q_hist,q_mean_step,"
          "q_mean_time,nst_ref,ref_disagreement,"
          "time_min,time_median,reps,t_setup,t_solve,t_rhs,t_jac,t_profiled,"
-         "profiled,flag";
+         "profiled,flag,"
+         "split,nfe_e,nfe_f,nst_f,nst_f_att,netf_f,ndomeig,nfe_domeig,"
+         "lsrk_max_stages,nst_expstab,nst_acc,split_residual,split_jac_err,"
+         "domeig_ratio";
 }
 
 inline std::string fmt_long(long v)
@@ -233,7 +254,15 @@ inline std::string csv_row(const RunStats& s)
   {
     r += fmt_real(v, "%.6e") + ",";
   }
-  r += std::to_string(s.profiled) + "," + std::to_string(s.flag);
+  r += std::to_string(s.profiled) + "," + std::to_string(s.flag) + ",";
+  r += s.split + ",";
+  for (long v : {s.nfe_e, s.nfe_f, s.nst_f, s.nst_f_att, s.netf_f, s.ndomeig,
+                 s.nfe_domeig, s.lsrk_max_stages, s.nst_expstab, s.nst_acc})
+  {
+    r += fmt_long(v) + ",";
+  }
+  r += fmt_real(s.split_residual, "%.3e") + "," +
+       fmt_real(s.split_jac_err, "%.3e") + "," + fmt_real(s.domeig_ratio, "%.6f");
   return r;
 }
 

@@ -26,12 +26,19 @@
  * preconditioner solves ignore the lr argument (block-diagonal
  * preconditioners are side-agnostic). Both are needed by the IDA
  * adapters, which pass fy = NULL and lr = SUN_PREC_LEFT.
+ *
+ * A problem may also offer additive splittings of f (ARKStep IMEX,
+ * MRIStep) and a bound of the dominant eigenvalue of df/dy (LSRKStep).
+ * The pieces of a splitting are separate functions: rhs() and jac() stay
+ * as they are, so the unsplit runs do not depend on whether a splitting
+ * exists, and --check-split verifies that the pieces add up to f.
  * -----------------------------------------------------------------*/
 
 #ifndef FIRKODE_BENCHMARK_PROBLEM_HPP_
 #define FIRKODE_BENCHMARK_PROBLEM_HPP_
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -77,15 +84,41 @@ struct ProblemSpec
   LinSolKind ls_default = LinSolKind::Dense;
   sunindextype mu = 0, ml = 0;           // Jacobian band widths
   sunindextype mass_mu = 0, mass_ml = 0; // mass matrix band widths
-  sunindextype nnz = 0;                  // Jacobian nonzeros (sparse solvers)
-  bool has_jac     = false;
-  bool has_jtimes  = false;
-  bool has_prec    = false;
-  bool has_mass    = false;
-  bool has_exact   = false; // exact solution of the ODE system
-  bool linear      = false; // f linear in y with constant Jacobian
-  bool symmetric   = false; // Jacobian symmetric (PCG admissible)
-  int nroots       = 0;
+  sunindextype nnz   = 0;                // Jacobian nonzeros (sparse solvers)
+  bool has_jac       = false;
+  bool has_jtimes    = false;
+  bool has_prec      = false;
+  bool has_mass      = false;
+  bool has_exact     = false; // exact solution of the ODE system
+  bool linear        = false; // f linear in y with constant Jacobian
+  bool symmetric     = false; // Jacobian symmetric (PCG admissible)
+  bool dom_eig_const = false; // the dom_eig() bound does not depend on (t, y)
+  int nroots         = 0;
+};
+
+// The signature of ARKDomEigFn (arkode_lsrkstep.h), repeated so that the
+// problem interface needs no ARKODE header
+using DomEigFn = int (*)(sunrealtype t, N_Vector y, N_Vector fn,
+                         sunrealtype* lambdaR, sunrealtype* lambdaI,
+                         void* user_data, N_Vector temp1, N_Vector temp2,
+                         N_Vector temp3);
+
+// An additive splitting of f. ARKStep IMEX: f = fe + fi. MRIStep:
+// f = fe + fi + ff with the slow explicit part fe, the slow implicit part fi
+// (either may be absent) and the fast part ff. The implicit part comes with
+// its own Jacobian (direct solvers, on the problem's matrix pattern) or
+// Jacobian-vector product and preconditioner (Krylov solvers).
+struct RhsSplit
+{
+  std::string name;
+  FIRKRhsFn fe                 = nullptr;
+  FIRKRhsFn fi                 = nullptr;
+  FIRKRhsFn ff                 = nullptr;
+  FIRKLsJacFn jac_i            = nullptr;
+  FIRKLsJacTimesVecFn jtimes_i = nullptr;
+  FIRKLsPrecSetupFn psetup_i   = nullptr;
+  FIRKLsPrecSolveFn psolve_i   = nullptr;
+  bool linear_i = false; // fi affine in y with a constant Jacobian
 };
 
 class Problem
@@ -127,6 +160,12 @@ public:
   // Applied to the state at every restart boundary (--restart-every), e.g. a
   // split-operator update, before the integrator is re-initialized
   virtual void restart_update(sunrealtype, N_Vector) const {}
+
+  // Additive splittings of f (ARKStep IMEX, MRIStep); none by default
+  virtual std::vector<RhsSplit> splits() const { return {}; }
+
+  // A bound of the dominant eigenvalue of df/dy (LSRKStep); none by default
+  virtual DomEigFn dom_eig() const { return nullptr; }
 
   // Let the problem adjust its preconditioner to the chosen stage count
   // and options (matrix-free heat2d needs the psolve variant)
@@ -186,6 +225,17 @@ inline int write_full_jacobian(SUNMatrix J, const sunrealtype* a, sunindextype N
   }
   default: return -1;
   }
+}
+
+// The splitting of a problem by name
+inline RhsSplit find_split(const Problem& p, const std::string& name)
+{
+  for (const RhsSplit& s : p.splits())
+  {
+    if (s.name == name) { return s; }
+  }
+  throw std::runtime_error("unsupported: problem " + p.spec().name +
+                           " has no splitting '" + name + "'");
 }
 
 std::unique_ptr<Problem> make_problem(const std::string& name);

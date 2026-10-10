@@ -6,9 +6,11 @@ fully implicit Runge-Kutta methods):
 - `firk_klin` measures the stacked Krylov iteration counts of the stage
   solve (the first section below);
 - `firkode_benchmark` is the harness that compares FIRKODE with CVODE (BDF),
-  ARKODE (ARKStep implicit DIRK/ESDIRK tables) and IDA (BDF, residual
-  form) on a common set of stiff test problems (the second section). Its
-  results are recorded in [`BENCHMARK_BDF.md`](BENCHMARK_BDF.md).
+  ARKODE (ARKStep DIRK/ESDIRK tables and IMEX pairs, LSRKStep, MRIStep) and
+  IDA (BDF, residual form) on a common set of stiff test problems (the
+  second section). Its results are recorded in
+  [`BENCHMARK_BDF.md`](BENCHMARK_BDF.md) (CVODE and IDA) and
+  [`BENCHMARK_ARKODE.md`](BENCHMARK_ARKODE.md) (ARKODE).
 
 ## firk_klin: stacked Krylov iterations per Newton iteration
 
@@ -120,6 +122,19 @@ driver).
 | `detest_b5` | problem B5 of the stiff DETEST set (Enright, Hull and Lindberg 1975): `y1' = -10 y1 + 100 y2`, `y2' = -100 y1 - 10 y2`, `y3' = -4 y3`, `y4' = -y4`, `y5' = -0.5 y5`, `y6' = -0.1 y6`, `y(0) = 1`; eigenvalues `-10 +- 100 i` (84.29 degrees from the negative real axis), -4, -1, -0.5, -0.1 | 6 | [0, 20] | dense (band `mu = ml = 1`, KLU) | exact solution; transcribed from STDTST (ACM TOMS Algorithm 648), whose end-point values agree with it to 3.9e-14 (their y1, y2 carry that error; the exact values are about 1e-87) |
 | `bruss3d`   | 3-D Brusselator on the unit cube (`a` = 1, `b` = 3.4), 7-point Laplacian with Neumann conditions, interleaved `(u, v)` | `2 n^3` | [0, 10] | KLU (CSR Jacobian); band/dense for small `n` | `--n`, `--alpha` (default 1), `--pert`; family B12 (factorization-dominated) |
 | `sector`    | linear `y' = A (y - phi) + phi'` with eigenvalues `r_k (-cos theta +- i sin theta)`, `r_k` log-spaced in `[rmin, rmax]`, `A = Q blockdiag(B_k) Q` | `2 m` | [0, 10] | band (`mu = ml = 1`); dense if `--coupled 1` | exact solution; `--m --theta --rmin --rmax --coupled --delta --nonlin --forcing sine\|square --period` (the square forcing is B11's switched RC ladder) |
+| `kprmri`    | the multirate Kvaerno-Prothero-Robinson problem of `examples/arkode/C_serial/ark_kpr_mri.c`: slow row `G tmp1 + e tmp2 + r'/(2u)`, fast row `e tmp1 - tmp2 + s'/(2 sqrt(2 + s))`, `r = 0.5 cos t`, `s = cos(w t)` | 2 | [0, 5] | dense | exact solution; `--G` (default -100, slow stiffness), `--w` (100, time-scale separation), `--e` (0.5, coupling); splittings `mri`, `mri-imex`, `mri-explicit` (MRIStep) |
+
+Splittings for ARKStep IMEX and MRIStep (`--split NAME`, checked by
+`--check-split`): `bruss3d` `imex` (explicit reaction, implicit linear
+diffusion, its Jacobian on the KLU pattern of the full one); `heat2d` `imex`
+(explicit advection and forcing, implicit diffusion), `mri` (slow implicit
+diffusion and forcing, fast explicit advection) and `mri-imex` (slow explicit
+forcing, slow implicit diffusion, fast advection); `diurnal` `imex`
+(explicit transport, implicit kinetics with an exact block preconditioner);
+`kpr` `imex` (the splitting of the ARKODE logging tests). Eigenvalue bounds
+for LSRKStep (`--check-domeig`): exact for `analytic`, `pr`, `sector` and
+`heat2d` (complex for a cell Peclet number above one), a Gershgorin bound
+for `bruss3d`.
 
 Errors of the PDE problems are measured against a tight-tolerance solution
 of the same semi-discrete system, not against the PDE solution.
@@ -143,9 +158,14 @@ firkode_benchmark --problem P --integrator I [options]
 | `--predictor extrapolate\|trivial`, `--no-refilter`, `--no-newton-safety`, `--controller NAME`, `--impgus-k K1 K2` | FIRKODE options (EXPERT mode) |
 | `--mode beginner\|expert`                 | FIRKODE mode (default BEGINNER). Any EXPERT-only option switches to EXPERT, which also changes the step-size formula; the mode is recorded in the `mode` column |
 | `--stald`                                | CVODE: BDF stability-limit detection (`CVodeSetStabLimDet`); the `method` column reads `BDF+STALD` |
-| `--arkode-linear`, `--ark-predictor P`   | ARKODE options                                                             |
+| `--arkode-linear`, `--ark-predictor P`, `--ark-itable NAME`, `--ark-optimal` | ARKODE options: a linearly implicit problem, the predictor, the implicit table by name (exclusive with `--order`; the `method` column reads the table name, `+optimal`, `+linear`), and `ARKStepSetOptimalParams` (deprecated, tuned for older default tables) applied before the other options |
+| `--integrator arkode-imex --split NAME`, `--ark-etable NAME` | ARKStep IMEX on an additive splitting of the problem (`fe` explicit, `fi` implicit with the splitting's Jacobian or product and preconditioner); `--order q` selects ARKODE's default pair, `--ark-itable` with `--ark-etable` a pair by name; `--arkode-linear` applies when the implicit part is linear; `nfe` counts `fi`, `nfe_e` counts `fe` |
+| `--integrator arkode-lsrk`, `--lsrk-method rkc2\|rkl2`, `--dom-eig user\|power`, `--dom-eig-freq N`, `--lsrk-max-stages S`, `--dom-eig-safety F` | LSRKStep (RKC or RKL, order 2, M = I) with the problem's eigenvalue bound or the power iteration (100 iterations, relative tolerance 5e-3, 10 initial warm-ups, a deterministic start vector); the eigenvalue is computed once when the bound is constant (or the problem linear, for the power iteration) and every 25 steps otherwise; `stages` and `lsrk_max_stages` are the most stages of a step |
+| `--integrator arkode-mri --split NAME`, `--mri-table NAME`, `--mri-fast-table NAME`, `--mri-fast-h H`, `--mri-controller decoupled\|htol` | MRIStep: slow scale on `fe` and `fi` of the splitting with an MRI coupling by name (default MRIStep's), fast scale `ff` with an explicit ARKStep inner stepper (an ERK table by name, default ARKStep's) at the same tolerances or a fixed fast step; the slow step is adaptive (an I controller; `htol` = MRIHTol with two I controllers, which tightens the fast tolerance only: its factor is capped at 1) or fixed (`--fixed-h`); `nst_f`, `nst_f_att`, `nfe_f`, `netf_f` count the fast scale; no `--restart-every` |
 | `--maxsteps N`, `--maxnef N`, `--h0 H`, `--tf T`                | limits and final time                                       |
 | `--grid K`, `--grid-geom T1 MULT`, `--no-tstop`                | output grid (used to replicate the examples); with the default stop-time handling every output time is a stop time, so `--grid K` makes the integrator land on K points exactly instead of interpolating |
+| `--steps K`                              | K internal steps (one-step returns towards the final time, as the logging tests take them); no error metrics |
+| `--check-split --split NAME`, `--check-domeig` | checks instead of a run: the pieces of a splitting add up to f and its implicit Jacobian matches differences of `fi` (`split_residual`, `split_jac_err`); the eigenvalue bound against the power iteration (`domeig_ratio`) |
 | `--fixed-h H`                            | fixed-step run (FIRKODE, ARKODE)                                           |
 | `--one-step --h H`                       | one adaptive step of size H; prints the error-estimate norms               |
 | `--roots`                                | rootfinding run; prints the root times                                     |
@@ -188,6 +208,13 @@ failure flag (a CSV row is still printed).
 | `time_min`, `time_median`, `reps` | wall-clock seconds of create/evolve, minimum and median over the repetitions |
 | `t_setup`, `t_solve`, `t_rhs`, `t_jac`, `t_profiled`, `profiled` | `--profile` only: seconds in linear-solver setups (factorizations, preconditioner setups), solves, right-hand sides and Jacobians, and the wall time of that profiled repetition; `profiled` = 1 marks the row |
 | `flag` | the integrator's return flag |
+| `split` | the additive splitting of a run (`--split`, `arkode-imex` and `arkode-mri`; also the checked one of `--check-split`) |
+| `nfe_e`, `nfe_f` | explicit right-hand sides (ARKStep IMEX `fe`, MRIStep slow explicit `fe`) and fast right-hand sides (MRIStep); `nfe` counts the implicit (IMEX, MRI slow implicit) or the only (LSRK) right-hand side |
+| `nst_f`, `nst_f_att`, `netf_f` | fast steps, fast step attempts and fast error-test failures (MRIStep inner stepper) |
+| `ndomeig`, `nfe_domeig`, `lsrk_max_stages` | LSRKStep: dominant-eigenvalue updates, right-hand sides of the power iteration (`--dom-eig power`), and the most stages of a step (last interval of a restarted run) |
+| `nst_expstab`, `nst_acc` | ARKODE: steps limited by stability and by accuracy |
+| `split_residual`, `split_jac_err` | `--check-split`: max over three times and two states of `\|f - (fe + fi + ff)\|` relative to the sum of the pieces' max norms, and of the implicit Jacobian (or Jacobian-vector products) against central differences of `fi`, relative to its max norm |
+| `domeig_ratio` | `--check-domeig`: modulus of the problem's eigenvalue bound at `(t0, y0)` over the power iteration's estimate (>= 1 for an upper bound) |
 
 The driver prepends `family`, `cell_key`, `label`, `params`, `driver_flag`
 (`ok`, `TIMEOUT`, `UNSUPPORTED`, `SOLVER_FAIL_<flag>`, `FAIL_rc<n>`),
@@ -205,10 +232,18 @@ $PY benchmarks/firkode/scripts/make_report.py \
     --results benchmarks/firkode/results/<run-id> \
     --figdir doc/shared/figs/firkode/benchmarks/bdf \
     --inject benchmarks/firkode/BENCHMARK_BDF.md
+$PY benchmarks/firkode/scripts/make_report.py --report arkode \
+    --results benchmarks/firkode/results/<run-id> \
+    --figdir doc/shared/figs/firkode/benchmarks/arkode \
+    --inject benchmarks/firkode/BENCHMARK_ARKODE.md
 ```
 
+`--family` takes family names (B1-B13, A0-A8) and the aliases `bdf` (the
+families of `BENCHMARK_BDF.md`: B1, B8-B13), `arkode` (those of
+`BENCHMARK_ARKODE.md`: A0-A8) and `all`; an unknown name is an error.
 `--ref-bin PATH` computes the reference solutions with another binary (the
-extended-precision build) and records it in `provenance.json`.
+extended-precision build) and records it in `provenance.json`; B13 and A4
+refuse to run without it.
 `--fast [SECONDS]` runs the part of the suite that finishes fast: the full cell
 lists are kept, cheap cells (by their time cap) run first, every cell is cut
 off after SECONDS (default 10; a reference computation gets three times that)
@@ -218,7 +253,7 @@ results directory without `--fast`, and a reference that exceeded the budget
 is recomputed then (`--workers` combines with it).
 `--progress` prints the number of finished cells of the selected families
 and the elapsed time, after every cell (with `--workers`, the parent reads
-the worker CSV files every 30 s). `--validate` and the B3 logging run are not counted.
+the worker CSV files every 60 s). `--validate` and the B3 logging run are not counted.
 `--list` prints the number of cells of the selected families and exits; the
 Jacobian dumps of the B10 gate land in `results/<run-id>/jac/<problem>/` (not
 committed, like `reference/`, `logs/` and `claims/`).
@@ -253,8 +288,17 @@ the machine, so their timings carry more noise than a serial run; the
 sentinel rows of every worker measure that, and the report marks rows
 with `nworkers` > 1.
 `--validate` first replicates repository examples and tests and compares
-the counters with their `.out` files (direct linear solvers exactly, Krylov
-paths within a few percent). Sweeps are resumable: cells already present in
+the counters with their `.out` files by the criterion `test/testRunner`
+applies to answer files (integers within 10 percent, floats to 4 digits;
+Krylov paths and replicas of a different program by a stated relative
+tolerance). Direct-solver replicas match exactly on the platform that
+generated the answer files, but root-search counts and long tight-tolerance
+runs differ in the last bits on other platforms; `validation.csv` and the
+console record whether each replica matched exactly. The validation also
+runs `--check-split` on every splitting (residual below 1e-13, Jacobian
+differences below 1e-6) and `--check-domeig` on every eigenvalue bound
+(ratio within [0.99, 1.02] for the exact bounds, [0.99, 1.6] for the
+Gershgorin bound of `bruss3d`). Sweeps are resumable: cells already present in
 the family's CSV are skipped; `--retry-failed` repeats failed or timed-out
 cells and `--force` repeats everything. Reference solutions are computed
 once per problem and size into `results/<run-id>/reference/` (not committed).

@@ -17,14 +17,18 @@
 # -----------------------------------------------------------------
 # Report generator for the FIRKODE benchmark suite: reads the CSV files
 # written by run_benchmarks.py, derives the quantities quoted in
-# src/firkode/BENCHMARK.md, and writes Markdown table fragments and PNG
-# figures. The fragments are injected into (or checked against) the
+# benchmarks/firkode/BENCHMARK_BDF.md (--report bdf, the default) or
+# BENCHMARK_ARKODE.md (--report arkode), and writes Markdown table fragments
+# and PNG figures. The fragments are injected into (or checked against) the
 # <!-- begin generated: NAME --> ... <!-- end generated --> blocks of the
 # report so that every number in it is traceable to a CSV row.
 #
 #   make_report.py --results benchmarks/firkode/results/<run-id> \
 #       --figdir doc/shared/figs/firkode/benchmarks/bdf \
 #       [--inject benchmarks/firkode/BENCHMARK_BDF.md | --check benchmarks/firkode/BENCHMARK_BDF.md]
+#   make_report.py --report arkode --results benchmarks/firkode/results/<run-id> \
+#       --figdir doc/shared/figs/firkode/benchmarks/arkode \
+#       [--inject benchmarks/firkode/BENCHMARK_ARKODE.md]
 # -----------------------------------------------------------------
 """Report generator for the FIRKODE benchmark suite."""
 
@@ -67,6 +71,17 @@ LABEL_ORDER = [
     "ARKODE DIRK3",
     "ARKODE DIRK4",
     "ARKODE DIRK5",
+    "ARKODE DIRK SDIRK_5_3_4",
+    "ARKODE DIRK ESDIRK437L2SA_7_3_4",
+    "ARKODE DIRK KVAERNO_7_4_5",
+    "ARKODE DIRK ARK548L2SAb_DIRK_8_4_5",
+    "ARKODE IMEX3",
+    "ARKODE IMEX4",
+    "ARKODE IMEX5",
+    "ARKODE LSRK RKC2",
+    "ARKODE LSRK RKL2",
+    "ARKODE MRI ESDIRK34a",
+    "ARKODE MRI IMEX-SR32",
     "IDA BDF q<=2",
     "IDA BDF",
 ]
@@ -854,11 +869,14 @@ def sentinel_table(rows):
 
 
 def validation_table(rows):
-    header = ["replica", "passed", "tolerance", "mismatch", "note"]
+    # exact: every counter equal to the answer file; "answer" in the tolerance
+    # column is the answer-file criterion of test/testRunner (run_benchmarks.py)
+    header = ["replica", "passed", "exact", "tolerance", "mismatch", "note"]
     out = [
         [
             r["label"],
             "yes" if r.get("passed") == "1" else "NO",
+            {"1": "yes", "0": "no"}.get(r.get("exact", ""), "NA"),
             r.get("tolerance", ""),
             r.get("mismatch", "") or "-",
             r.get("note", ""),
@@ -868,20 +886,63 @@ def validation_table(rows):
     return md_table(header, out)
 
 
+def known(value) -> bool:
+    """A provenance value that was actually recorded (collect_provenance
+    writes "unavailable" where a lookup failed, e.g. sysctl on Linux)."""
+    return value is not None and str(value).strip() not in ("", "unavailable", "NA", "None")
+
+
+def provenance_os(prov: dict) -> str:
+    """The operating system of a run: recorded by newer drivers, otherwise
+    derived from platform.platform() ("macOS-15.1-arm64-arm-64bit",
+    "Linux-6.8.0-45-generic-x86_64-with-glibc2.39")."""
+    if known(prov.get("os")):
+        return {"Darwin": "macOS"}.get(prov["os"], prov["os"])
+    plat = str(prov.get("platform", ""))
+    if plat.startswith(("macOS", "Darwin")):
+        return "macOS"
+    if plat.startswith("Linux"):
+        return "Linux"
+    return plat or "NA"
+
+
+def provenance_machine(prov: dict) -> str:
+    if known(prov.get("machine_note")):
+        return prov["machine_note"]
+    parts = []
+    cpu = prov.get("cpu_brand") if known(prov.get("cpu_brand")) else prov.get("machine")
+    if known(cpu):
+        perf = prov.get("perf_levels") or {}
+        p, e = perf.get("performance_cores"), perf.get("efficiency_cores")
+        parts.append(f"{cpu} ({p}P+{e}E cores)" if known(p) and known(e) else str(cpu))
+    mem = prov.get("memory_bytes")
+    if known(mem) and str(mem).isdigit():
+        parts.append(f"{int(mem) // 2**30} GiB")
+    if known(prov.get("cpu_count")):
+        parts.append(f"{prov['cpu_count']} logical CPUs")
+    return ", ".join(parts) if parts else "NA"
+
+
 def provenance_table(prov: dict):
     cache = prov.get("cmake_cache", {})
     git = prov.get("git", {})
-    mem = prov.get("memory_bytes", "unavailable")
-    mem = f"{int(mem) // 2**30} GiB" if str(mem).isdigit() else str(mem)
-    perf = prov.get("perf_levels", {})
-    machine = prov.get("machine_note") or (
-        f"{prov.get('cpu_brand')} ({perf.get('performance_cores')}P+{perf.get('efficiency_cores')}E cores), "
-        f"{mem}, {prov.get('cpu_count')} logical CPUs"
-    )
+    os_name = provenance_os(prov)
+    plat = prov.get("platform", "NA")
+    version = prov.get("os_version")
+    if os_name == "macOS":
+        os_row = f"macOS {version} ({plat})" if known(version) else f"macOS ({plat})"
+    else:
+        # Linux: the distribution name (newer drivers) and the platform string,
+        # which carries the kernel release and the C library
+        os_row = f"{version} ({plat})" if known(version) else str(plat)
+    compiler = prov.get("compiler") if known(prov.get("compiler")) else "NA"
+    if known(cache.get("CMAKE_CXX_COMPILER")):
+        compiler = f"{compiler}; CMake C++ compiler `{cache['CMAKE_CXX_COMPILER']}`"
+    threads = ", ".join(f"{k}={v}" for k, v in (prov.get("env") or {}).items() if known(v))
     items = [
-        ("Machine", machine),
-        ("OS", f"macOS {prov.get('os_version')} ({prov.get('platform')})"),
-        ("Compiler", prov.get("compiler")),
+        ("Machine", provenance_machine(prov)),
+        ("OS", os_row),
+        ("Compiler", compiler),
         ("CMake / generator", f"{prov.get('cmake')} / {cache.get('CMAKE_GENERATOR')}"),
         (
             "Build type and flags",
@@ -906,7 +967,7 @@ def provenance_table(prov: dict):
             "Python / numpy / matplotlib",
             f"{prov.get('python')} / {prov.get('numpy')} / {prov.get('matplotlib')}",
         ),
-        ("Threads", str(prov.get("env"))),
+        ("Threads", threads or "NA"),
         ("Run started (UTC)", prov.get("started_utc")),
         ("Binary SHA-256", prov.get("binary_sha256", "")),
     ]
@@ -957,6 +1018,12 @@ def main() -> int:
     ap.add_argument("--inject", default=None, help="BENCHMARK.md to update in place")
     ap.add_argument("--check", default=None, help="BENCHMARK.md to verify")
     ap.add_argument("--no-figures", action="store_true")
+    ap.add_argument(
+        "--report",
+        choices=("bdf", "arkode"),
+        default="bdf",
+        help="the report whose tables and figures to build (BENCHMARK_BDF.md or BENCHMARK_ARKODE.md)",
+    )
     args = ap.parse_args()
 
     results = Path(args.results)
@@ -987,6 +1054,16 @@ def main() -> int:
             "B11",
             "B12",
             "B13",
+            "A0",
+            "A1",
+            "A2_fixed",
+            "A2_adaptive",
+            "A3",
+            "A4",
+            "A5",
+            "A6",
+            "A7",
+            "A8",
         ]
     }
     prov = (
@@ -997,6 +1074,14 @@ def main() -> int:
 
     tables = {}
     tables["provenance"] = provenance_table(prov)
+    shas = {prov.get("binary_sha256")} | {
+        run.get("binary_sha256") for run in prov.get("runs", []) if isinstance(run, dict)
+    }
+    shas.discard(None)
+    if len(shas) > 1:
+        print(f"warning: the results come from {len(shas)} different binaries (provenance.json)")
+    if args.report == "arkode":
+        return arkode_report(args, data, results, figdir, tables_dir, tables)
     plt_bdf = None if args.no_figures else setup_matplotlib()
     from report_bdf import bdf_tables
 
@@ -1134,6 +1219,25 @@ def main() -> int:
                 plt, data["B7_roots"], data["B7_dense"], figdir / "roots_dense_output.png"
             )
 
+    if args.inject:
+        return inject(Path(args.inject), tables, check_only=False)
+    if args.check:
+        return inject(Path(args.check), tables, check_only=True)
+    return 0
+
+
+def arkode_report(args, data, results, figdir, tables_dir, tables) -> int:
+    """The tables and figures of BENCHMARK_ARKODE.md (families A0-A8)."""
+    from report_arkode import arkode_tables
+
+    plt = None if args.no_figures else setup_matplotlib()
+    tables.update(arkode_tables(data, results, figdir, plt))
+    tables["validation"] = validation_table(data["validation"])
+    tables["sentinel"] = sentinel_table(data["sentinel"])
+    for name, text in tables.items():
+        (tables_dir / f"{name}.md").write_text(
+            f"<!-- generated by make_report.py --report arkode from {results.name} -->\n" + text
+        )
     if args.inject:
         return inject(Path(args.inject), tables, check_only=False)
     if args.check:

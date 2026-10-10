@@ -32,6 +32,7 @@
 
 #include <firkode/firkode.h>
 #include <sundials/sundials_core.h>
+#include <sundomeigest/sundomeigest_power.h>
 #include <sunmatrix/sunmatrix_band.h>
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunmatrix/sunmatrix_sparse.h>
@@ -50,6 +51,9 @@ std::unique_ptr<Integrator> make_cvode_integrator();
 #endif
 #ifdef BENCHMARK_HAVE_ARKODE
 std::unique_ptr<Integrator> make_arkode_integrator();
+std::unique_ptr<Integrator> make_arkode_imex_integrator();
+std::unique_ptr<Integrator> make_arkode_lsrk_integrator();
+std::unique_ptr<Integrator> make_arkode_mri_integrator();
 #endif
 #ifdef BENCHMARK_HAVE_IDA
 std::unique_ptr<Integrator> make_ida_integrator();
@@ -63,6 +67,9 @@ std::unique_ptr<Integrator> make_integrator(const std::string& name)
 #endif
 #ifdef BENCHMARK_HAVE_ARKODE
   if (name == "arkode") { return make_arkode_integrator(); }
+  if (name == "arkode-imex") { return make_arkode_imex_integrator(); }
+  if (name == "arkode-lsrk") { return make_arkode_lsrk_integrator(); }
+  if (name == "arkode-mri") { return make_arkode_mri_integrator(); }
 #endif
 #ifdef BENCHMARK_HAVE_IDA
   if (name == "ida") { return make_ida_integrator(); }
@@ -124,6 +131,19 @@ Options reference_options(const Options& o, const std::string& integ, double rto
   r.stald                   = false;
   r.arkode_linear           = false;
   r.ark_predictor           = -1;
+  r.ark_itable.clear();
+  r.ark_optimal = false;
+  r.ark_etable.clear();
+  r.split.clear();
+  r.dom_eig_freq    = -1;
+  r.lsrk_max_stages = 0;
+  r.dom_eig_safety  = -1.0;
+  r.mri_table.clear();
+  r.mri_fast_table.clear();
+  r.mri_fast_h   = 0.0;
+  r.check_split  = false;
+  r.check_domeig = false;
+  r.steps        = 0;
   r.msbp = r.msbj = -1;
   r.dgmax = r.dgmax_jbad = -1.0;
   r.reuse_policy.clear();
@@ -297,6 +317,198 @@ void dump_jacobian(Problem& p, const Options& o, double t, N_Vector y,
   }
 }
 
+// A deterministic perturbation of y0 (relative 1 percent), so that a check
+// also sees a state off the initial one
+void perturbed_state(N_Vector y0, N_Vector y, long N)
+{
+  N_VScale(SUN_RCONST(1.0), y0, y);
+  sunrealtype* yd = N_VGetArrayPointer(y);
+  for (long i = 0; i < N; i++)
+  {
+    yd[i] *= SUN_RCONST(1.0) + SUN_RCONST(0.01) * std::sin((sunrealtype)(i + 1));
+  }
+}
+
+// Relative max-norm difference between a Jacobian of the implicit part and
+// central differences of fi: the full matrix (jac_i, N <= 2000) or products
+// with three fixed vectors (jtimes_i)
+double split_jacobian_error(Problem& p, const RhsSplit& sp, double t,
+                            N_Vector y, SUNContext ctx)
+{
+  const ProblemSpec& spec = p.spec();
+  const long N            = (long)spec.N;
+  void* ud                = p.user_data();
+  N_Vector fy = N_VClone(y), yp = N_VClone(y), ym = N_VClone(y);
+  N_Vector fp = N_VClone(y), fm = N_VClone(y), t1 = N_VClone(y),
+           t2 = N_VClone(y), t3 = N_VClone(y);
+  check(sp.fi((sunrealtype)t, y, fy, ud), "fi(check)");
+  const double cbrt_eps  = std::cbrt(std::numeric_limits<double>::epsilon());
+  const sunrealtype* yd  = N_VGetArrayPointer(y);
+  sunrealtype* ypd       = N_VGetArrayPointer(yp);
+  sunrealtype* ymd       = N_VGetArrayPointer(ym);
+  const sunrealtype* fpd = N_VGetArrayPointer(fp);
+  const sunrealtype* fmd = N_VGetArrayPointer(fm);
+  double err = 0.0, scale = 0.0;
+  if (sp.jac_i != nullptr)
+  {
+    if (N > 2000) { throw std::runtime_error("--check-split: N exceeds 2000"); }
+    const LinSolKind kind = is_direct(spec.ls_default) ? spec.ls_default
+                                                       : LinSolKind::Dense;
+    SUNMatrix A           = nullptr;
+    if (kind == LinSolKind::Dense) { A = SUNDenseMatrix(spec.N, spec.N, ctx); }
+    else if (kind == LinSolKind::Band)
+    {
+      A = SUNBandMatrix(spec.N, spec.mu, spec.ml, ctx);
+    }
+    else { A = SUNSparseMatrix(spec.N, spec.N, spec.nnz, SUN_CSR_MAT, ctx); }
+    check_ptr(A, "SUNMatrix(check)");
+    check(SUNMatZero(A), "SUNMatZero");
+    check(sp.jac_i((sunrealtype)t, y, fy, A, ud, t1, t2, t3), "jac_i(check)");
+    std::vector<double> J;
+    to_dense(A, J, N);
+    SUNMatDestroy(A);
+    for (double v : J) { scale = std::max(scale, std::fabs(v)); }
+    for (long j = 0; j < N; j++)
+    {
+      const double del = cbrt_eps * std::max(std::fabs((double)yd[j]), 1.0);
+      N_VScale(SUN_RCONST(1.0), y, yp);
+      N_VScale(SUN_RCONST(1.0), y, ym);
+      ypd[j] = (sunrealtype)((double)yd[j] + del);
+      ymd[j] = (sunrealtype)((double)yd[j] - del);
+      check(sp.fi((sunrealtype)t, yp, fp, ud), "fi(check)");
+      check(sp.fi((sunrealtype)t, ym, fm, ud), "fi(check)");
+      for (long i = 0; i < N; i++)
+      {
+        const double dq = ((double)fpd[i] - (double)fmd[i]) / (2.0 * del);
+        err             = std::max(err, std::fabs(dq - J[(size_t)(i * N + j)]));
+      }
+    }
+  }
+  else
+  {
+    N_Vector v = N_VClone(y), Jv = N_VClone(y);
+    sunrealtype* vd    = N_VGetArrayPointer(v);
+    const double ynorm = std::max((double)N_VMaxNorm(y), 1.0);
+    for (int k = 1; k <= 3; k++)
+    {
+      for (long i = 0; i < N; i++)
+      {
+        vd[i] = std::sin((sunrealtype)(k * (i + 1)));
+      }
+      check(sp.jtimes_i(v, Jv, (sunrealtype)t, y, fy, ud, t1),
+            "jtimes_i(check)");
+      const double del = cbrt_eps * ynorm;
+      N_VLinearSum(SUN_RCONST(1.0), y, (sunrealtype)del, v, yp);
+      N_VLinearSum(SUN_RCONST(1.0), y, (sunrealtype)-del, v, ym);
+      check(sp.fi((sunrealtype)t, yp, fp, ud), "fi(check)");
+      check(sp.fi((sunrealtype)t, ym, fm, ud), "fi(check)");
+      const sunrealtype* Jvd = N_VGetArrayPointer(Jv);
+      scale                  = std::max(scale, (double)N_VMaxNorm(Jv));
+      for (long i = 0; i < N; i++)
+      {
+        const double dq = ((double)fpd[i] - (double)fmd[i]) / (2.0 * del);
+        err             = std::max(err, std::fabs(dq - (double)Jvd[i]));
+      }
+    }
+    N_VDestroy(v);
+    N_VDestroy(Jv);
+  }
+  for (N_Vector w : {fy, yp, ym, fp, fm, t1, t2, t3}) { N_VDestroy(w); }
+  return scale > 0.0 ? err / scale : err;
+}
+
+// --check-split: at three times and two states, the pieces of the splitting
+// add up to f (residual relative to the sum of the pieces' max norms, the
+// scale of their rounding), and the implicit part's Jacobian matches
+// central differences of fi
+void check_split(Problem& p, const Options& o, N_Vector y0, SUNContext ctx,
+                 RunStats& st)
+{
+  if (o.split.empty())
+  {
+    throw std::runtime_error("--check-split needs --split NAME");
+  }
+  const RhsSplit sp = find_split(p, o.split);
+  const long N      = (long)p.spec().N;
+  void* ud          = p.user_data();
+  N_Vector y = N_VClone(y0), f = N_VClone(y0), sum = N_VClone(y0),
+           piece  = N_VClone(y0);
+  const double t0 = (double)p.spec().t0;
+  double res = 0.0, jerr = 0.0;
+  const bool has_jac = sp.fi != nullptr &&
+                       (sp.jac_i != nullptr || sp.jtimes_i != nullptr);
+  for (double t : {t0, 0.5 * (t0 + o.tf), o.tf})
+  {
+    for (int state = 0; state < 2; state++)
+    {
+      if (state == 0) { N_VScale(SUN_RCONST(1.0), y0, y); }
+      else { perturbed_state(y0, y, N); }
+      check(p.rhs()((sunrealtype)t, y, f, ud), "rhs(check)");
+      N_VConst(SUN_RCONST(0.0), sum);
+      double scale = 0.0;
+      for (FIRKRhsFn g : {sp.fe, sp.fi, sp.ff})
+      {
+        if (g == nullptr) { continue; }
+        check(g((sunrealtype)t, y, piece, ud), "split piece(check)");
+        N_VLinearSum(SUN_RCONST(1.0), sum, SUN_RCONST(1.0), piece, sum);
+        scale += (double)N_VMaxNorm(piece);
+      }
+      N_VLinearSum(SUN_RCONST(1.0), f, SUN_RCONST(-1.0), sum, sum);
+      const double d = (double)N_VMaxNorm(sum);
+      res            = std::max(res, scale > 0.0 ? d / scale : d);
+      if (has_jac)
+      {
+        jerr = std::max(jerr, split_jacobian_error(p, sp, t, y, ctx));
+      }
+    }
+  }
+  for (N_Vector w : {y, f, sum, piece}) { N_VDestroy(w); }
+  st.split          = sp.name;
+  st.split_residual = res;
+  if (has_jac) { st.split_jac_err = jerr; }
+}
+
+// --check-domeig: |lambda| of the problem's bound at (t0, y0) over the
+// modulus the power iteration finds on difference quotients of f (a real
+// dominant eigenvalue is assumed; an upper bound gives a ratio >= 1)
+void check_domeig(Problem& p, N_Vector y0, SUNContext ctx, RunStats& st)
+{
+  DomEigFn de = p.dom_eig();
+  if (de == nullptr)
+  {
+    throw std::runtime_error("unsupported: problem " + p.spec().name +
+                             " has no eigenvalue bound");
+  }
+  const long N  = (long)p.spec().N;
+  void* ud      = p.user_data();
+  const auto t0 = p.spec().t0;
+  N_Vector fn = N_VClone(y0), t1 = N_VClone(y0), t2 = N_VClone(y0),
+           t3 = N_VClone(y0), q = N_VClone(y0);
+  check(p.rhs()(t0, y0, fn, ud), "rhs(check)");
+  sunrealtype lr = 0, li = 0;
+  check(de(t0, y0, fn, &lr, &li, ud, t1, t2, t3), "dom_eig(check)");
+  sunrealtype* qd = N_VGetArrayPointer(q);
+  for (long i = 0; i < N; i++)
+  {
+    qd[i] = SUN_RCONST(1.0) + SUN_RCONST(0.5) * std::sin((sunrealtype)(i + 1));
+  }
+  SUNDomEigEstimator dee = SUNDomEigEstimator_Power(q, 20000,
+                                                    SUN_RCONST(1.0e-8), ctx);
+  check_ptr(dee, "SUNDomEigEstimator_Power");
+  check(SUNDomEigEstimator_SetRhs(dee, ud, p.rhs()),
+        "SUNDomEigEstimator_SetRhs");
+  check(SUNDomEigEstimator_SetRhsLinearizationPoint(dee, t0, y0),
+        "SUNDomEigEstimator_SetRhsLinearizationPoint");
+  check(SUNDomEigEstimator_Initialize(dee), "SUNDomEigEstimator_Initialize");
+  sunrealtype pr = 0, pi = 0;
+  check(SUNDomEigEstimator_Estimate(dee, &pr, &pi),
+        "SUNDomEigEstimator_Estimate");
+  SUNDomEigEstimator_Destroy(&dee);
+  for (N_Vector w : {fn, t1, t2, t3, q}) { N_VDestroy(w); }
+  st.domeig_ratio = std::hypot((double)lr, (double)li) /
+                    std::hypot((double)pr, (double)pi);
+}
+
 // Integrate with the given options and record y at each time in ts
 long run_trajectory(Problem& p, const Options& o, N_Vector y0, SUNContext ctx,
                     const std::vector<double>& ts,
@@ -401,7 +613,7 @@ int run(int argc, char* argv[])
     std::printf(" cvode");
 #endif
 #ifdef BENCHMARK_HAVE_ARKODE
-    std::printf(" arkode");
+    std::printf(" arkode arkode-imex arkode-lsrk arkode-mri");
 #endif
 #ifdef BENCHMARK_HAVE_IDA
     std::printf(" ida");
@@ -463,6 +675,19 @@ int run(int argc, char* argv[])
     throw std::runtime_error("--order-hist needs the plain evolve mode with "
                              "a single output time and a stop time");
   }
+  {
+    // the options of the other ARKODE steppers apply to them only
+    const bool imex_mri = opts.integrator == "arkode-imex" ||
+                          opts.integrator == "arkode-mri";
+    if (!opts.split.empty() && !imex_mri && !opts.check_split)
+    {
+      throw std::runtime_error("--split applies to arkode-imex and arkode-mri");
+    }
+    if (imex_mri && opts.split.empty())
+    {
+      throw std::runtime_error(opts.integrator + " needs --split NAME");
+    }
+  }
   problem->prepare(opts);
 
   N_Vector y0 = N_VNew_Serial(spec.N, ctx);
@@ -476,6 +701,19 @@ int run(int argc, char* argv[])
   st.atol       = opts.atol;
   st.N          = (long)spec.N;
   st.reps       = opts.reps;
+
+  if (opts.check_split || opts.check_domeig)
+  {
+    if (opts.check_split) { check_split(*problem, opts, y0, ctx, st); }
+    if (opts.check_domeig) { check_domeig(*problem, y0, ctx, st); }
+    st.method = "check";
+    if (!opts.no_header) { std::printf("%s\n", csv_header().c_str()); }
+    std::printf("%s\n", csv_row(st).c_str());
+    N_VDestroy(y0);
+    problem.reset();
+    SUNContext_Free(&ctx);
+    return 0;
+  }
 
   // ---- reference solution at tf (and at the dense-output samples) ----
   std::vector<double> sample_times;
@@ -491,12 +729,15 @@ int run(int argc, char* argv[])
 
   std::vector<std::vector<sunrealtype>> ref; // ref[k] at sample_times[k]
   bool have_ref = false;
-  if (spec.has_exact && opts.mode != Mode::OneStep)
+  // one step and a fixed number of steps end before tf: no error metrics
+  const bool final_errors = opts.mode != Mode::OneStep &&
+                            opts.mode != Mode::Steps;
+  if (spec.has_exact && final_errors)
   {
     exact_trajectory(*problem, y0, sample_times, ref);
     have_ref = true;
   }
-  else if (opts.mode != Mode::OneStep)
+  else if (final_errors)
   {
     Reference rf;
     bool from_file = false;
@@ -715,6 +956,16 @@ int run(int argc, char* argv[])
     else if (opts.mode == Mode::OneStep)
     {
       flag = integ->evolve((sunrealtype)tf, y, tret, true);
+    }
+    else if (opts.mode == Mode::Steps)
+    {
+      // as the logging tests do: one-step returns towards tf, which enters
+      // the initial-step heuristic
+      for (int k = 0; k < opts.steps; k++)
+      {
+        flag = integ->evolve((sunrealtype)tf, y, tret, true);
+        if (!integ->is_success(flag)) { break; }
+      }
     }
     else if (opts.mode == Mode::Dense)
     {

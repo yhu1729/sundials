@@ -57,6 +57,7 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
         problem_wave1d_fem.cpp
         problems_testset.cpp
         problem_bruss3d.cpp
+        problem_kprmri.cpp
         integrator_firkode.cpp)
 
     set(libs
@@ -67,7 +68,8 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
         sundials_sunlinsolspgmr
         sundials_sunlinsolpcg
         sundials_sunmatrixdense
-        sundials_sunmatrixband)
+        sundials_sunmatrixband
+        sundials_sundomeigestpower)
 
     set(defs)
 
@@ -78,7 +80,8 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
     endif()
 
     if(SUNDIALS_ENABLE_ARKODE)
-      list(APPEND sources integrator_arkode.cpp)
+      list(APPEND sources integrator_arkode.cpp integrator_lsrk.cpp
+           integrator_mri.cpp)
       list(APPEND libs sundials_arkode)
       list(APPEND defs BENCHMARK_HAVE_ARKODE)
     endif()

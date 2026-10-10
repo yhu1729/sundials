@@ -104,6 +104,73 @@ CONFIGS = {
         "FIRKODE s=3 periodic msbp=50",
         ["--stages", "3", "--reuse-policy", "periodic", "--msbp", "50"],
     ),
+    # baselines of the FIRKODE-versus-ARKODE families (BENCHMARK_ARKODE.md);
+    # labels carry no "[" (that marks the untimed twins)
+    "ark4opt": ("arkode", "ARKODE DIRK4 optimal", ["--order", "4", "--ark-optimal"]),
+    "ark5opt": ("arkode", "ARKODE DIRK5 optimal", ["--order", "5", "--ark-optimal"]),
+    "sdirk534": ("arkode", "ARKODE DIRK SDIRK_5_3_4", ["--ark-itable", "ARKODE_SDIRK_5_3_4"]),
+    "esdirk437": (
+        "arkode",
+        "ARKODE DIRK ESDIRK437L2SA_7_3_4",
+        ["--ark-itable", "ARKODE_ESDIRK437L2SA_7_3_4"],
+    ),
+    "kvaerno745": (
+        "arkode",
+        "ARKODE DIRK KVAERNO_7_4_5",
+        ["--ark-itable", "ARKODE_KVAERNO_7_4_5"],
+    ),
+    "ark548b": (
+        "arkode",
+        "ARKODE DIRK ARK548L2SAb_DIRK_8_4_5",
+        ["--ark-itable", "ARKODE_ARK548L2SAb_DIRK_8_4_5"],
+    ),
+    # IMEX on the problem's "imex" splitting (--arkode-linear acts where the
+    # implicit part is linear: bruss3d and heat2d, not diurnal or kpr)
+    "imex3": (
+        "arkode-imex",
+        "ARKODE IMEX3",
+        ["--split", "imex", "--order", "3", "--arkode-linear"],
+    ),
+    "imex4": (
+        "arkode-imex",
+        "ARKODE IMEX4",
+        ["--split", "imex", "--order", "4", "--arkode-linear"],
+    ),
+    "imex5": (
+        "arkode-imex",
+        "ARKODE IMEX5",
+        ["--split", "imex", "--order", "5", "--arkode-linear"],
+    ),
+    "rkc2": ("arkode-lsrk", "ARKODE LSRK RKC2", ["--lsrk-method", "rkc2", "--dom-eig", "user"]),
+    "rkl2": ("arkode-lsrk", "ARKODE LSRK RKL2", ["--lsrk-method", "rkl2", "--dom-eig", "user"]),
+    "rkc2pow": (
+        "arkode-lsrk",
+        "ARKODE LSRK RKC2 power",
+        ["--lsrk-method", "rkc2", "--dom-eig", "power"],
+    ),
+    "mri_impl": (
+        "arkode-mri",
+        "ARKODE MRI ESDIRK34a",
+        ["--split", "mri", "--mri-table", "ARKODE_MRI_GARK_ESDIRK34a", "--arkode-linear"],
+    ),
+    "mri_impl_htol": (
+        "arkode-mri",
+        "ARKODE MRI ESDIRK34a htol",
+        [
+            "--split",
+            "mri",
+            "--mri-table",
+            "ARKODE_MRI_GARK_ESDIRK34a",
+            "--arkode-linear",
+            "--mri-controller",
+            "htol",
+        ],
+    ),
+    "mri_imex": (
+        "arkode-mri",
+        "ARKODE MRI IMEX-SR32",
+        ["--split", "mri-imex", "--mri-table", "ARKODE_IMEX_MRI_SR32", "--arkode-linear"],
+    ),
     # ARKODE with the settings of examples/arkode/C_serial/ark_robertson.c
     "ark4tuned": (
         "arkode",
@@ -633,6 +700,251 @@ def cells_b13() -> list[Cell]:
     return cells
 
 
+# ---------------------------------------------------------------------------
+# Families A0-A8: FIRKODE against ARKODE (BENCHMARK_ARKODE.md). Each family
+# emits every cell it compares, the FIRKODE and DIRK baselines included
+# (cells shared with a B family have the same key but are measured again in
+# the A family's CSV, so that a report reads one family's rows only).
+# ---------------------------------------------------------------------------
+
+# the ARKODE DIRK configurations: ARKODE's defaults of order 3-5 ("best
+# default"), its tuned parameter sets and four further tables ("best of 9")
+DIRK_DEFAULT = ["ark3", "ark4", "ark5"]
+DIRK_ALL = DIRK_DEFAULT + ["ark4opt", "ark5opt", "sdirk534", "esdirk437", "kvaerno745", "ark548b"]
+# the tables of distinct methods (the tuned sets reuse the default tables)
+DIRK_TABLES = DIRK_DEFAULT + ["sdirk534", "esdirk437", "kvaerno745", "ark548b"]
+IMEX_ALL = ["imex3", "imex4", "imex5"]
+
+
+def fixed_step_cell(family, problem, cfg, params, h, tf, extra=()):
+    """An untimed fixed-step cell with a tightly converged Newton iteration
+    (FIXED_ARGS), as in B4; FIRKODE also gets a tight stacked tolerance and
+    restarts of its stacked FGMRES: the default space (6s = 18 iterations, no
+    restart) does not converge on the first large step of SECTOR, whose
+    distinct stiff modes need 15-30 iterations, and a fixed-step run cannot
+    recover by reducing the step."""
+    integ, label, cargs = CONFIGS[cfg]
+    firk = ["--stage-epslin", "1e-3", "--stage-maxrs", "5"] if integ == "firkode" else []
+    return Cell(
+        family,
+        problem,
+        integ,
+        label,
+        None,
+        None,
+        dict(params),
+        list(cargs)
+        + ["--fixed-h", f"{h:.17g}", "--tf", f"{tf:g}"]
+        + FIXED_ARGS
+        + firk
+        + list(extra)
+        + MAXSTEPS,
+        cap_s=120.0,
+        reps="single",
+        timed=False,
+        needs_ref=False,
+    )
+
+
+def cells_a0() -> list[Cell]:
+    """Method selection: the observed order of every table, coupling and
+    LSRK method the families use (untimed, exact solutions)."""
+    cells = []
+    for cfg in DIRK_TABLES:
+        for k in range(6):
+            cells.append(fixed_step_cell("A0", "kpr", cfg, {}, 0.1 / 2**k, 0.5))
+    for cfg in IMEX_ALL:
+        for k in range(6):
+            cells.append(fixed_step_cell("A0", "kpr", cfg, {}, 0.1 / 2**k, 0.5))
+    # MRI couplings on the non-stiff kprmri, fast step hs / 100 with an
+    # order-5 fast method, so that the slow coupling sets the order
+    for cfg in ["mri_impl", "mri_imex"]:
+        for k in range(5):
+            hs = 0.05 / 2**k
+            cells.append(
+                fixed_step_cell(
+                    "A0",
+                    "kprmri",
+                    cfg,
+                    {"G": -1.0},
+                    hs,
+                    1.0,
+                    [
+                        "--mri-fast-h",
+                        f"{hs / 100:.17g}",
+                        "--mri-fast-table",
+                        "ARKODE_DORMAND_PRINCE_7_4_5",
+                    ],
+                )
+            )
+    # LSRK on a real spectrum (the stage count adapts to the fixed step)
+    for cfg in ["rkc2", "rkl2"]:
+        for k in range(5):
+            cells.append(
+                fixed_step_cell(
+                    "A0",
+                    "sector",
+                    cfg,
+                    {"m": 10, "theta": 0.0, "rmin": 1.0, "rmax": 100.0},
+                    0.1 / 2**k,
+                    1.0,
+                )
+            )
+    return cells
+
+
+def cells_a1() -> list[Cell]:
+    """Small stiff ODEs: FIRKODE s = 3 against the ARKODE DIRK methods."""
+    cells = []
+    rtols = rtol_grid(2, 10, half=True)
+    for p in ["rober", "vdpol", "orego", "hires"]:
+        for cfg in ["firk3"] + DIRK_ALL:
+            for r in rtols:
+                cells.append(make_cell("A1", p, cfg, r, cap_s=120.0))
+        if p == "rober":
+            for r in rtols:
+                cells.append(make_cell("A1", p, "ark4tuned", r, cap_s=120.0))
+    return cells
+
+
+A2_PR_LAMBDAS = [-1.0, -1.0e2, -1.0e4, -1.0e6, -1.0e8]
+
+
+def cells_a2() -> list[Cell]:
+    """Stage order: fixed-step orders on Prothero-Robinson problems (A2_fixed)
+    and adaptive work-precision on stiff PR and SECTOR (A2_adaptive)."""
+    cells = []
+    fixed_problems = [("pr", {"n": 4, "lambda": lam}) for lam in A2_PR_LAMBDAS]
+    fixed_problems.append(("sector", {"m": 10, "theta": 0.0, "rmin": 1.0, "rmax": 1.0e6}))
+    for p, prm in fixed_problems:
+        for cfg in ["firk3"] + DIRK_TABLES:
+            for k in range(7):
+                cells.append(fixed_step_cell("A2_fixed", p, cfg, prm, 0.5 / 2**k, 1.0))
+    adaptive = [("pr", {"n": 1000, "lambda": lam}) for lam in [-1.0, -1.0e4, -1.0e8]]
+    for theta in [0.0, 80.0]:
+        for rmax in [1.0e3, 1.0e6]:
+            adaptive.append(("sector", {"m": 100, "theta": theta, "rmin": 1.0, "rmax": rmax}))
+    for p, prm in adaptive:
+        for cfg in ["firk3", "ark3", "ark4", "ark5", "sdirk534", "kvaerno745"]:
+            for r in rtol_grid(4, 10, half=True):
+                cells.append(make_cell("A2_adaptive", p, cfg, r, prm, cap_s=300.0))
+    return cells
+
+
+def cells_a3() -> list[Cell]:
+    """Mass matrices: finite-element heat and wave problems (B5 cells and
+    the B9 problem with the ARKODE DIRK methods)."""
+    cells = []
+    for n in [101, 401]:
+        for cfg in ["firk3", "ark3", "ark4", "ark5"]:
+            for r in rtol_grid(4, 10, half=False):
+                cells.append(
+                    make_cell("A3", "heat1dfem", cfg, r, {"n": n}, cap_s=300.0, maxsteps=200000)
+                )
+    for n in [100, 400]:
+        for damping in ["kv", "mass"]:
+            for mass in ["lumped", "consistent"]:
+                prm = {"n": n, "damping": damping, "mass": mass}
+                for cfg in ["firk3", "ark4", "ark5"]:
+                    for r in rtol_grid(3, 8, half=False):
+                        cells.append(
+                            make_cell("A3", "wave1dfem", cfg, r, prm, cap_s=600.0, maxsteps=400000)
+                        )
+    return cells
+
+
+def cells_a4() -> list[Cell]:
+    """Tight tolerances, order 5 against order 5 (needs --ref-bin)."""
+    cells = []
+    for p in ["rober", "vdpol", "orego", "hires", "sector"]:
+        variants = [{}]
+        if p == "sector":
+            variants = [
+                {"m": 100, "theta": 0.0, "rmin": 1.0, "rmax": 1.0e3},
+                {"m": 100, "theta": 80.0, "rmin": 1.0, "rmax": 1.0e3},
+            ]
+        for prm in variants:
+            for cfg in ["firk3", "ark5", "ark5opt", "kvaerno745", "ark548b"]:
+                for r in rtol_grid(8, 13, half=True):
+                    rr = None if p == "sector" else 1e-16
+                    cells.append(make_cell("A4", p, cfg, r, prm, cap_s=900.0, ref_rtol=rr))
+    for cfg in ["firk3", "ark5"]:
+        for r in rtol_grid(8, 11, half=True):
+            cells.append(
+                make_cell("A4", "bruss3d", cfg, r, {"n": 16}, cap_s=3600.0, ref_rtol=1e-10)
+            )
+    return cells
+
+
+def cells_a5(include_large: bool) -> list[Cell]:
+    """3-D Brusselator (KLU): full implicitness against IMEX (implicit
+    linear diffusion) and explicit stabilized LSRK."""
+    cells = []
+    sizes = [8, 12, 16] + ([24] if include_large else [])
+    caps = {8: 600.0, 12: 1200.0, 16: 3600.0, 24: 7200.0}
+    cfgs = ["firk3", "ark4"] + IMEX_ALL + ["rkc2", "rkl2", "rkc2pow"]
+    for n in sizes:
+        prm = {"n": n}
+        for cfg in cfgs:
+            for r in rtol_grid(3, 8, half=False):
+                cells.append(
+                    make_cell("A5", "bruss3d", cfg, r, prm, cap_s=caps[n], ref_rtol=1e-10)
+                )
+        for cfg in ["firk3", "ark4", "imex4"]:
+            cells.append(
+                profile_twin(
+                    make_cell("A5", "bruss3d", cfg, 1e-6, prm, cap_s=caps[n], ref_rtol=1e-10)
+                )
+            )
+    return cells
+
+
+A6_VELOCITIES = [0.0, 0.5, 50.0, 500.0]
+
+
+def cells_a6() -> list[Cell]:
+    """2-D advection-diffusion over the velocity (IMEX against the advective
+    CFL limit, LSRK against complex spectra, MRI), and the spectral control
+    of LSRK on SECTOR."""
+    cells = []
+    for v in A6_VELOCITIES:
+        prm = {"mx": 200, "my": 100, "velocity": v}
+        cfgs = ["firk3", "ark4", "imex4", "imex5", "rkc2", "rkl2", "rkc2pow"]
+        if v > 0.0:
+            cfgs += ["mri_impl", "mri_imex"]
+        for cfg in cfgs:
+            for r in rtol_grid(3, 8, half=False):
+                cells.append(make_cell("A6", "heat2d", cfg, r, prm, cap_s=1800.0))
+    for theta in [0.0, 30.0]:
+        prm = {"m": 100, "theta": theta, "rmin": 1.0, "rmax": 1.0e3}
+        for cfg in ["firk3", "ark4", "rkc2", "rkl2"]:
+            for r in rtol_grid(3, 8, half=False):
+                cells.append(make_cell("A6", "sector", cfg, r, prm, cap_s=600.0))
+    return cells
+
+
+def cells_a7() -> list[Cell]:
+    """Multirate: kprmri over the time-scale separation w."""
+    cells = []
+    for w in [10.0, 100.0, 1000.0]:
+        prm = {"G": -100.0, "w": w, "e": 0.5}
+        for cfg in ["firk3", "ark4", "mri_impl", "mri_impl_htol", "mri_imex"]:
+            for r in rtol_grid(3, 8, half=False):
+                cells.append(make_cell("A7", "kprmri", cfg, r, prm, cap_s=600.0))
+    return cells
+
+
+def cells_a8(include_large: bool) -> list[Cell]:
+    """Diurnal kinetics: IMEX with implicit kinetics and an exact block
+    preconditioner against FIRKODE's stacked Krylov solve."""
+    cells = []
+    for g in [10, 20, 40, 80] + ([160] if include_large else []):
+        for cfg in ["firk3", "ark4"] + IMEX_ALL:
+            for r in [1e-4, 1e-6, 1e-8]:
+                cells.append(make_cell("A8", "diurnal", cfg, r, {"mx": g, "my": g}, cap_s=1800.0))
+    return cells
+
+
 FAMILY_BUILDERS = {
     "B1": lambda large: cells_b1(),
     "B2": lambda large: cells_b2(large),
@@ -647,9 +959,46 @@ FAMILY_BUILDERS = {
     "B11": lambda large: cells_b11(),
     "B12": lambda large: cells_b12(large),
     "B13": lambda large: cells_b13(),
+    "A0": lambda large: cells_a0(),
+    "A1": lambda large: cells_a1(),
+    "A2": lambda large: cells_a2(),
+    "A3": lambda large: cells_a3(),
+    "A4": lambda large: cells_a4(),
+    "A5": lambda large: cells_a5(large),
+    "A6": lambda large: cells_a6(),
+    "A7": lambda large: cells_a7(),
+    "A8": lambda large: cells_a8(large),
 }
 
 FAMILY_ORDER = ["B4", "B1", "B5", "B7", "B6", "B3", "B2", "B8", "B9", "B10", "B11", "B12", "B13"]
+FAMILY_ORDER += ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"]
+
+# --family aliases: the families of each report
+FAMILY_ALIASES = {
+    "all": FAMILY_ORDER,
+    "bdf": ["B1", "B8", "B9", "B10", "B11", "B12", "B13"],
+    "arkode": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"],
+}
+# families whose references need the extended-precision build
+NEEDS_REF_BIN = {"B13", "A4"}
+
+
+def resolve_families(requested: list[str]) -> list[str]:
+    """The requested families and aliases in run order; an unknown name is
+    an error (it used to be dropped silently)."""
+    wanted = set()
+    for name in requested:
+        if name in FAMILY_ALIASES:
+            wanted.update(FAMILY_ALIASES[name])
+        elif name in FAMILY_BUILDERS:
+            wanted.add(name)
+        else:
+            raise SystemExit(
+                f"unknown family {name!r}: choose from {', '.join(FAMILY_ORDER)} "
+                f"or {', '.join(FAMILY_ALIASES)}"
+            )
+    return [f for f in FAMILY_ORDER if f in wanted]
+
 
 # ---------------------------------------------------------------------------
 # Validation replicas of repository examples and tests
@@ -657,18 +1006,23 @@ FAMILY_ORDER = ["B4", "B1", "B5", "B7", "B6", "B3", "B2", "B8", "B9", "B10", "B1
 
 EX = "examples/firkode/C_serial"
 UT = "test/unit_tests/firkode/CXX_serial"
+# firk_test_vdp is judged by its exit code only (its step counts differ across
+# platforms), so the answers are those of its former answer file
+VDP_NOTE = f"{UT}/firk_test_vdp.cpp: step counts of its former answer file firk_test_vdp.out"
 
 
 def validation_cells() -> list[dict]:
     """Replicas of repository examples with the counters of their .out files.
 
-    tol: "exact" for direct linear solvers; a relative tolerance where
-    floating-point differences between builds are expected (Krylov paths;
-    answer files generated on another platform).
+    tol: "answer" (the default) is the criterion test/testRunner applies to
+    answer files (see ANSWER_INT_PERCENT); a number is a relative tolerance
+    for replicas that differ from their answer file by more (Krylov paths;
+    answer files generated by a different program). Whether a replica also
+    matches exactly is recorded separately.
     """
     out = []
 
-    def add(name, cell, expected, tol="exact", note=""):
+    def add(name, cell, expected, tol="answer", note=""):
         out.append(dict(name=name, cell=cell, expected=expected, tol=tol, note=note))
 
     common = ["--grid", "10", "--no-tstop", "--maxsteps", "100000"]
@@ -857,7 +1211,8 @@ def validation_cells() -> list[dict]:
             (0.2, 5, 3.3880e-09),
             (0.1, 11, 1.8742e-10),
             (0.05, 20, 1.0999e-11),
-            (0.025, 40, 6.6480e-13),
+            # an error below 1e4 u is not compared across platforms
+            (0.025, 40, ("<", 1.0e4 * sys.float_info.epsilon)),
         ]
     ):
         add(
@@ -878,7 +1233,8 @@ def validation_cells() -> list[dict]:
             ),
             dict(nst=nst, err_abs_max=err),
             tol=1e-4,
-            note=f"{UT}/firk_test_order_pr_3_-1e4.out",
+            note=f"{UT}/firk_test_order_pr_3_-1e4.out"
+            + ("; it prints 'error < 1e4 u' for this step size" if isinstance(err, tuple) else ""),
         )
     add(
         "firk_test_vdp_1e-6",
@@ -897,7 +1253,7 @@ def validation_cells() -> list[dict]:
             False,
         ),
         dict(nst=922),
-        note=f"{UT}/firk_test_vdp.out",
+        note=VDP_NOTE,
     )
     add(
         "firk_test_vdp_1e-10",
@@ -916,7 +1272,7 @@ def validation_cells() -> list[dict]:
             False,
         ),
         dict(nst=9345),
-        note=f"{UT}/firk_test_vdp.out",
+        note=VDP_NOTE,
     )
     add(
         "firk_test_vdp_1e-4",
@@ -935,7 +1291,7 @@ def validation_cells() -> list[dict]:
             False,
         ),
         dict(nst=295),
-        note=f"{UT}/firk_test_vdp.out (the loose-tolerance run of benchmark issue 2)",
+        note=VDP_NOTE + " (the loose-tolerance run of benchmark issue 2)",
     )
     add(
         "ark_analytic",
@@ -956,6 +1312,239 @@ def validation_cells() -> list[dict]:
         dict(nst=34, nst_att=35, nfe=353, nsetups=35, nje=2, nni=175, netf=1),
         note="examples/arkode/C_serial/ark_analytic.out (ARKodeSetLinear as in the example)",
     )
+    add(
+        "ark_analytic_table_name",
+        Cell(
+            "validation",
+            "analytic",
+            "arkode",
+            "ARKODE DIRK ESDIRK547L2SA_7_4_5",
+            1e-6,
+            1e-8,
+            {"lambda": -100.0},
+            ["--arkode-linear", "--ark-itable", "ARKODE_ESDIRK547L2SA_7_4_5"] + common,
+            300,
+            "single",
+            False,
+            False,
+        ),
+        dict(nst=81, nst_att=82, nfe=997, nsetups=82, nje=3, nni=492, netf=1),
+        note="examples/arkode/C_serial/ark_analytic_arkode.scalar_tolerances_1e-6_1e-8_arkode."
+        "table_names_ARKODE_ESDIRK547L2SA_7_4_5_ARKODE_ERK_NONE.out (a table chosen by name)",
+    )
+    add(
+        "test_logging_arkode_arkstep_1_1_1",
+        Cell(
+            "validation",
+            "kpr",
+            "arkode",
+            "ARKODE DIRK4",
+            1e-6,
+            1e-10,
+            {},
+            ["--steps", "3", "--tf", "1", "--no-tstop"],
+            300,
+            "single",
+            False,
+            False,
+        ),
+        dict(nst=3, nst_att=3, nfe=51, nsetups=2, nje=1, nni=33, netf=0),
+        note="test/unit_tests/logging/test_logging_arkode_arkstep_1_1_1.out (three one-step returns "
+        "towards t = 1)",
+    )
+    add(
+        "test_logging_arkode_arkstep_2_1_1",
+        Cell(
+            "validation",
+            "kpr",
+            "arkode-imex",
+            "ARKODE IMEX4",
+            1e-6,
+            1e-10,
+            {},
+            ["--split", "imex", "--steps", "3", "--tf", "1", "--no-tstop"],
+            300,
+            "single",
+            False,
+            False,
+        ),
+        dict(nst=3, nst_att=3, nfe=59, nfe_e=23, nsetups=2, nje=1, nni=36, netf=0),
+        note="test/unit_tests/logging/test_logging_arkode_arkstep_2_1_1.out (ImEx, Newton, dense; "
+        "the splitting of problems/kpr.hpp)",
+    )
+    add(
+        "ark_analytic_lsrk",
+        Cell(
+            "validation",
+            "analytic",
+            "arkode-lsrk",
+            "ARKODE LSRK RKL2",
+            1e-8,
+            1e-8,
+            {"lambda": -1.0e6},
+            [
+                "--lsrk-method",
+                "rkl2",
+                "--dom-eig",
+                "user",
+                "--dom-eig-freq",
+                "0",
+                "--lsrk-max-stages",
+                "200",
+                "--dom-eig-safety",
+                "1.01",
+            ]
+            + common,
+            300,
+            "single",
+            False,
+            False,
+        ),
+        dict(nst=1120, nst_att=1124, nfe=141974, netf=4, ndomeig=1, lsrk_max_stages=199),
+        tol=0.10,
+        note="examples/arkode/C_serial/ark_analytic_lsrk.out was generated on another platform; the "
+        "example compiled here against the same library gives nst=1122 nst_att=1125 nfe=141857 netf=3 "
+        "and 200 stages, which the harness reproduces exactly",
+    )
+    # ark_kpr_mri slow_type fast_type hs: outputs every 0.1 to t = 5, slow and
+    # fast steps fixed (hf = hs / w with w = 100), the example's tolerances
+    mri_common = ["--grid", "50", "--no-tstop", "--maxsteps", "10000000"]
+    for slow, split, table, hs, rtol, expected in [
+        (
+            7,
+            "mri",
+            "ARKODE_MRI_GARK_IRK21a",
+            0.002,
+            4e-6,
+            dict(nst=2501, nst_f=250100, nfe=7002, nfe_f=502702, nni=4500, nncf=0, nje=126),
+        ),
+        (
+            11,
+            "mri-imex",
+            "ARKODE_IMEX_MRI_SR21",
+            0.001,
+            1e-6,
+            dict(
+                nst=5000,
+                nst_f=935000,
+                nfe_e=15001,
+                nfe=32981,
+                nfe_f=1875001,
+                nni=17980,
+                nncf=0,
+                nje=250,
+            ),
+        ),
+        (
+            3,
+            "mri-explicit",
+            "ARKODE_MERK21",
+            0.001,
+            0.01,
+            dict(nst=5000, nst_f=750000, nfe_e=10001, nfe_f=1505001),
+        ),
+    ]:
+        add(
+            f"ark_kpr_mri_{slow}_2_{hs:g}",
+            Cell(
+                "validation",
+                "kprmri",
+                "arkode-mri",
+                f"ARKODE MRI {table.removeprefix('ARKODE_')}",
+                rtol,
+                1e-11,
+                {},
+                [
+                    "--split",
+                    split,
+                    "--mri-table",
+                    table,
+                    "--mri-fast-table",
+                    "ARKODE_HEUN_EULER_2_1_2",
+                    "--fixed-h",
+                    f"{hs:g}",
+                    "--mri-fast-h",
+                    f"{hs / 100:g}",
+                ]
+                + mri_common,
+                300,
+                "single",
+                False,
+                False,
+            ),
+            expected,
+            note=f"examples/arkode/C_serial/ark_kpr_mri_{slow}_2_{hs:g}.out (slow {table}, fast "
+            "ARKODE_HEUN_EULER_2_1_2, fixed steps)",
+        )
+    # self-checks of the splittings (the pieces add up to f to rounding, the
+    # implicit Jacobian matches central differences) and of the eigenvalue
+    # bounds (against the power iteration; exact bounds within 2 percent, the
+    # Gershgorin bound of bruss3d above)
+    split_checks = [
+        ("kpr", {}, "imex", True),
+        ("bruss3d", {"n": 6}, "imex", True),
+        ("heat2d", {"mx": 12, "my": 10, "velocity": 50.0}, "imex", True),
+        ("heat2d", {"mx": 12, "my": 10, "velocity": 50.0}, "mri", True),
+        ("heat2d", {"mx": 12, "my": 10, "velocity": 50.0}, "mri-imex", True),
+        ("diurnal", {"mx": 8, "my": 8}, "imex", True),
+        ("kprmri", {}, "mri", True),
+        ("kprmri", {}, "mri-imex", True),
+        ("kprmri", {}, "mri-explicit", False),
+    ]
+    for prob, prm, split, has_jac in split_checks:
+        expected = {"split_residual": ("<", 1e-13)}
+        if has_jac:
+            expected["split_jac_err"] = ("<", 1e-6)
+        add(
+            f"check_split_{prob}_{split}",
+            Cell(
+                "validation",
+                prob,
+                "arkode",
+                "check",
+                None,
+                None,
+                prm,
+                ["--check-split", "--split", split],
+                120,
+                "single",
+                False,
+                False,
+            ),
+            expected,
+            note="--check-split: |f - (fe + fi + ff)| relative to the pieces' norms, and the "
+            "implicit Jacobian against central differences of fi",
+        )
+    domeig_checks = [
+        ("analytic", {"lambda": -1.0e6}, (0.99, 1.02)),
+        ("pr", {"lambda": -1.0e4}, (0.99, 1.02)),
+        ("sector", {"m": 10, "theta": 0.0, "rmin": 1.0, "rmax": 100.0}, (0.99, 1.02)),
+        ("heat2d", {"mx": 12, "my": 10}, (0.99, 1.02)),
+        ("heat2d", {"mx": 12, "my": 10, "velocity": 0.5}, (0.99, 1.02)),
+        ("bruss3d", {"n": 6}, (0.99, 1.6)),
+    ]
+    for prob, prm, (lo, hi) in domeig_checks:
+        tag = "_".join(f"{k}{v:g}" for k, v in prm.items())
+        add(
+            f"check_domeig_{prob}_{tag}",
+            Cell(
+                "validation",
+                prob,
+                "arkode",
+                "check",
+                None,
+                None,
+                prm,
+                ["--check-domeig"],
+                120,
+                "single",
+                False,
+                False,
+            ),
+            {"domeig_ratio": ("in", lo, hi)},
+            note="--check-domeig: the problem's eigenvalue bound over the power iteration's "
+            "estimate at (t0, y0)",
+        )
     add(
         "cv_kpr",
         Cell(
@@ -1024,27 +1613,84 @@ def validation_cells() -> list[dict]:
     return out
 
 
-def compare(expected: dict, row: dict, tol) -> tuple[bool, list[str]]:
-    msgs = []
-    ok = True
+# The criterion test/testRunner applies to answer files (the defaults of
+# SUNDIALS_TEST_INTEGER_PRECISION and SUNDIALS_TEST_FLOAT_PRECISION): an
+# integer passes within this percentage (truncated as testRunner truncates
+# it), a float to this many digits. Direct-solver counters reproduce an answer
+# file exactly on the platform that generated it but may differ in the last
+# bits elsewhere (root-search iterations, the step count of a long run at a
+# tight tolerance); the repository's own tests accept that with this criterion.
+ANSWER_INT_PERCENT = 10
+ANSWER_FLOAT_DIGITS = 4
+
+
+def within_answer_criterion(expected, got) -> bool:
+    if isinstance(expected, float):
+        tol = 10.0**-ANSWER_FLOAT_DIGITS
+        return math.isclose(expected, got, rel_tol=tol, abs_tol=tol)
+    if expected == got:
+        return True
+    return expected != 0 and abs(int(100 - got / expected * 100)) <= ANSWER_INT_PERCENT
+
+
+def same_as_printed(expected: float, got: float) -> bool:
+    """got rounded to the significant digits the answer file prints equals it."""
+    mantissa = repr(expected).lower().split("e")[0].replace("-", "").replace(".", "")
+    digits = max(1, len(mantissa.lstrip("0")))
+    return math.isfinite(got) and float(f"{got:.{digits - 1}e}") == expected
+
+
+def format_bound(v: tuple) -> str:
+    return f"< {v[1]:.4g}" if v[0] == "<" else f"in [{v[1]:.4g}, {v[2]:.4g}]"
+
+
+def compare(expected: dict, row: dict, tol) -> tuple[bool, bool, list[str], list[str]]:
+    """Compare a replica row with its answer.
+
+    Returns (passed, exact, failures, deviations): passed = every value within
+    tol ("answer": the answer-file criterion; a number: a relative tolerance),
+    exact = every value equal to the answer as printed (floats rounded to the
+    digits of the answer file); an expected value ("<", bound) is an upper
+    bound and ("in", lo, hi) a closed interval. deviations lists the passing values that
+    are not exact.
+    """
+    failures, deviations = [], []
+    exact = True
     for k, v in expected.items():
         got = row.get(k, "NA")
-        if isinstance(v, float):
+        if isinstance(v, tuple):
+            g = to_float(got)
+            want = format_bound(v)
+            if v[0] == "<":
+                passed = g < v[1]
+            elif v[0] == "in":
+                passed = v[1] <= g <= v[2]
+            else:
+                raise ValueError(f"unknown bound {v!r}")
+            same = passed
+        elif isinstance(v, float):
             g = to_float(got)
             rel = abs(g - v) / abs(v) if v != 0 else abs(g)
-            passed = rel <= (tol if tol != "exact" else 1e-12)
+            same = same_as_printed(v, g)
+            passed = within_answer_criterion(v, g) if tol == "answer" else rel <= tol
+            want = v
         else:
             g = to_int(got)
             if g is None:
-                passed = False
-            elif tol == "exact":
-                passed = g == v
+                same = passed = False
             else:
-                passed = abs(g - v) <= max(1, tol * abs(v))
+                same = g == v
+                if tol == "answer":
+                    passed = within_answer_criterion(v, g)
+                else:
+                    passed = abs(g - v) <= max(1, tol * abs(v))
+            want = v
+        exact &= same
         if not passed:
-            ok = False
-            msgs.append(f"{k}: expected {v}, got {got}")
-    return ok, msgs
+            failures.append(f"{k}: expected {want}, got {got}")
+        elif not same:
+            deviations.append(f"{k} {got} vs {want}")
+    return not failures, exact, failures, deviations
 
 
 # ---------------------------------------------------------------------------
@@ -1364,6 +2010,7 @@ class Progress:
             f"elapsed {format_duration(elapsed)}"
         )
 
+
 def spawn_workers(args, progress: Progress | None = None) -> int:
     """Run the sweep with --workers N worker processes claiming cells dynamically."""
     results = Path(args.results)
@@ -1442,25 +2089,32 @@ def run_validation(args, env: dict) -> bool:
     print("== validation", flush=True)
     for item in validation_cells():
         row = run_cell(item["cell"], args.bin, env, logs, None, "1")
-        ok, msgs = compare(item["expected"], row, item["tol"])
+        ok, exact, failures, deviations = compare(item["expected"], row, item["tol"])
         all_ok &= ok
+        criterion = "answer criterion" if item["tol"] == "answer" else f"within {item['tol']}"
         row.update(
             {
                 "family": "validation",
                 "label": item["name"],
-                "expected": ";".join(f"{k}={v}" for k, v in item["expected"].items()),
+                "expected": ";".join(
+                    f"{k} {format_bound(v)}" if isinstance(v, tuple) else f"{k}={v}"
+                    for k, v in item["expected"].items()
+                ),
                 "tolerance": str(item["tol"]),
                 "passed": int(ok),
-                "mismatch": "; ".join(msgs),
+                "exact": int(exact),
+                "mismatch": "; ".join(failures or deviations),
                 "note": item["note"],
             }
         )
         table.append(row)
-        print(
-            f"  {'PASS' if ok else 'FAIL'} {item['name']}"
-            + (f": {'; '.join(msgs)}" if msgs else ""),
-            flush=True,
-        )
+        if not ok:
+            status = f"FAIL {item['name']}: {'; '.join(failures)}"
+        elif exact:
+            status = f"PASS {item['name']} (exact)"
+        else:
+            status = f"PASS {item['name']} ({criterion}: {'; '.join(deviations)})"
+        print(f"  {status}", flush=True)
     # self-consistency of FIRKODE direct-solver counters (adaptive mode):
     # block solves = s per stacked FGMRES iteration + one error estimate per
     # attempt whose Newton iteration converged + one per refilter
@@ -1573,7 +2227,12 @@ def main() -> int:
         "extended-precision build); the files it writes are read by --bin",
     )
     ap.add_argument("--results", required=True, help="results directory for this run")
-    ap.add_argument("--family", nargs="*", default=[], help="families to run (B1..B13 or all)")
+    ap.add_argument(
+        "--family",
+        nargs="*",
+        default=[],
+        help="families to run (B1..B13, A0..A8) or aliases (bdf, arkode, all)",
+    )
     ap.add_argument("--list", action="store_true", help="print the cell counts and exit")
     ap.add_argument(
         "--fast",
@@ -1690,10 +2349,15 @@ def main() -> int:
             )
             return 1
 
-    families = args.family
-    if families == ["all"]:
-        families = FAMILY_ORDER
-    families = [f for f in FAMILY_ORDER if f in families]
+    families = resolve_families(args.family)
+    if not args.list and not args.ref_bin and NEEDS_REF_BIN.intersection(families):
+        print(
+            "families "
+            + ", ".join(sorted(NEEDS_REF_BIN.intersection(families)))
+            + " need the extended-precision build for their references (--ref-bin)",
+            file=sys.stderr,
+        )
+        return 1
     if args.list:
         total = 0
         for name in families:
