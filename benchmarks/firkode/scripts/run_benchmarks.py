@@ -1288,7 +1288,7 @@ def run_family(name: str, cells: list[Cell], args, env: dict, progress=None) -> 
 
 
 # ---------------------------------------------------------------------------
-# Progress and estimated finishing time (--progress)
+# Progress (--progress)
 # ---------------------------------------------------------------------------
 
 # how often the parent of --workers reads the worker CSV files, and the
@@ -1320,41 +1320,14 @@ def format_duration(seconds: float) -> str:
 
 
 class Progress:
-    """Counts the finished cells of a sweep and estimates its finishing time.
+    """Counts the finished cells of a sweep."""
 
-    The cost of a pending cell is the mean wall time of the recorded rows (of
-    earlier runs of the results directory too) of the same sub-family,
-    problem and size, else of the same sub-family. A sub-family without any
-    recorded row is estimated from the time caps of its cells, scaled by the
-    ratio of recorded wall time to the time caps of the recorded rows; that
-    part of the estimate is order-of-magnitude only and is reported apart.
-    The cell time is scaled by the ratio of worker time to cell time of this
-    run, which accounts for the references, the sentinels and waits on
-    reference locks (the worker time of a worker ends at its last finished
-    cell, so cells still running do not count), divided among the workers,
-    and bounded below by the costliest pending cell. Rows cut short by a
-    --fast budget are cost samples only in a --fast run.
-    """
-
-    def __init__(
-        self, plan: list[Cell], cells: list[Cell], results: Path, nworkers: int, fast: float | None
-    ):
+    def __init__(self, plan: list[Cell], results: Path):
         self.t0 = dt.datetime.now(dt.UTC)
-        self.nworkers = max(1, nworkers)
-        self.fast = fast
         # cell keys repeat across families (B1 and B8 share cells)
-        self.pending = {(c.family, c.key()): c for c in plan}
+        self.pending = {(c.family, c.key()) for c in plan}
         self.total = len(self.pending)
         self.n_done = 0
-        self.caps = {(c.family, c.key()): self.cap(c) for c in cells}
-        # [sum of wall_s, number of rows] per (family, problem, params) and per family
-        self.group_wall: dict[tuple, list] = {}
-        self.family_wall: dict[str, list] = {}
-        # sums of wall_s and of the time caps of the rows with a known cap
-        self.capped_wall = 0.0
-        self.capped_cap = 0.0
-        # per worker: [sum of wall_s of this run, timestamp of its last row]
-        self.worker_time: dict[str, list] = {}
         self.families = sorted({c.family for c in plan})
         # rows present before this run, not counted as finished by poll()
         self.seen: set = set()
@@ -1362,41 +1335,13 @@ class Progress:
             for path in family_files(results, fam):
                 for r in read_csv(path):
                     self.seen.add(row_ident(r))
-                    self._add_sample(r)
-
-    def cap(self, cell: Cell) -> float:
-        return cell.cap_s if self.fast is None else min(cell.cap_s, self.fast)
-
-    def _add_sample(self, row: dict) -> float:
-        wall = to_float(row.get("wall_s"))
-        if not math.isfinite(wall):
-            return 0.0
-        if self.fast is not None or row.get("driver_flag") != "FAST_TIMEOUT":
-            fam = row.get("family", "")
-            group = (fam, row.get("problem", ""), row.get("params", ""))
-            for pool, key in ((self.group_wall, group), (self.family_wall, fam)):
-                acc = pool.setdefault(key, [0.0, 0])
-                acc[0] += wall
-                acc[1] += 1
-            cap = self.caps.get((fam, row.get("cell_key")))
-            if cap:
-                self.capped_wall += wall
-                self.capped_cap += cap
-        return wall
 
     def record(self, row: dict) -> None:
         """Count a row written in this run (ignored unless it is a pending cell)."""
-        if self.pending.pop((row.get("family"), row.get("cell_key")), None) is None:
-            return
-        self.n_done += 1
-        wall = self._add_sample(row)
-        try:
-            stamp = dt.datetime.fromisoformat(row.get("timestamp", ""))
-        except (TypeError, ValueError):
-            stamp = dt.datetime.now(dt.UTC)
-        acc = self.worker_time.setdefault(str(row.get("worker", 0)), [0.0, stamp])
-        acc[0] += wall
-        acc[1] = max(acc[1], stamp)
+        key = (row.get("family"), row.get("cell_key"))
+        if key in self.pending:
+            self.pending.remove(key)
+            self.n_done += 1
 
     def poll(self, results: Path) -> int:
         """Count the new rows of the worker files; returns their number."""
@@ -1410,58 +1355,14 @@ class Progress:
                         self.record(r)
         return self.n_done - before
 
-    def overhead(self) -> float:
-        """Worker time per unit of cell time in this run (1 before any cell finished)."""
-        span = sum((last - self.t0).total_seconds() for _, last in self.worker_time.values())
-        wall = sum(w for w, _ in self.worker_time.values())
-        return max(1.0, span / wall) if wall > 0 else 1.0
-
     def report(self, now: dt.datetime | None = None) -> str:
         now = now or dt.datetime.now(dt.UTC)
         elapsed = (now - self.t0).total_seconds()
-        ratio = self.capped_wall / self.capped_cap if self.capped_cap > 0 else None
-        work, longest, from_caps, n_caps, unknown, cap_fams = 0.0, 0.0, 0.0, 0, 0, set()
-        for c in self.pending.values():
-            acc = self.group_wall.get((c.family, c.problem, c.params_str()))
-            acc = acc or self.family_wall.get(c.family)
-            if acc:
-                cost = acc[0] / acc[1]
-            elif ratio is not None:
-                cost = ratio * self.cap(c)
-                from_caps += cost
-                n_caps += 1
-                cap_fams.add(c.family)
-            else:
-                unknown += 1
-                cap_fams.add(c.family)
-                continue
-            work += cost
-            longest = max(longest, cost)
-        overhead = self.overhead()
-        remaining = max(work * overhead / self.nworkers, longest * overhead)
         pct = 100.0 * self.n_done / self.total if self.total else 100.0
-        msg = (
+        return (
             f"progress: {self.n_done}/{self.total} cells ({pct:.1f}%), "
             f"elapsed {format_duration(elapsed)}"
         )
-        if self.pending and unknown < len(self.pending):
-            finish = (now + dt.timedelta(seconds=remaining)).astimezone()
-            msg += (
-                f", remaining ~{format_duration(remaining)}, "
-                f"finish ~{finish.strftime('%Y-%m-%d %H:%M %Z')}"
-            )
-        if n_caps:
-            share = 100.0 * from_caps / work if work > 0 else 100.0
-            msg += (
-                f" ({share:.0f}% of it from the time caps of {n_caps} cells of "
-                f"{', '.join(sorted(cap_fams))}, not sampled yet)"
-            )
-        elif unknown:
-            msg += (
-                f" (+{unknown} cells of {', '.join(sorted(cap_fams))} "
-                "without a cost estimate yet)"
-            )
-        return msg
 
 def spawn_workers(args, progress: Progress | None = None) -> int:
     """Run the sweep with --workers N worker processes claiming cells dynamically."""
@@ -1708,8 +1609,8 @@ def main() -> int:
     ap.add_argument(
         "--progress",
         action="store_true",
-        help="print the finished cells of the sweep with an estimate of the remaining and the "
-        f"finishing time (after every cell, or every {PROGRESS_POLL_S:g} s with --workers)",
+        help="print the finished cells of the sweep and the elapsed time "
+        f"(after every cell, or every {PROGRESS_POLL_S:g} s with --workers)",
     )
     ap.add_argument("--worker", type=int, default=None, help="(internal) this worker's index")
     ap.add_argument("--nworkers", type=int, default=1, help="(internal) number of workers")
@@ -1804,12 +1705,10 @@ def main() -> int:
         return 0
     progress = None
     if args.progress and not worker_mode:
-        plan, cells = [], []
+        plan = []
         for name in families:
-            family_cells = FAMILY_BUILDERS[name](args.include_large)
-            cells += family_cells
-            plan += pending_cells(family_cells, args)
-        progress = Progress(plan, cells, results, max(args.workers, 1), args.fast)
+            plan += pending_cells(FAMILY_BUILDERS[name](args.include_large), args)
+        progress = Progress(plan, results)
         print(progress.report(), flush=True)
     if args.workers > 1 and not worker_mode:
         return spawn_workers(args, progress)

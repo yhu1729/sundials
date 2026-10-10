@@ -217,16 +217,8 @@ limited to the budget. Such rows are redone by any later run of the same
 results directory without `--fast`, and a reference that exceeded the budget
 is recomputed then (`--workers` combines with it).
 `--progress` prints the number of finished cells of the selected families
-with the estimated remaining and finishing time, after every cell (with
-`--workers`, the parent reads the worker CSV files every 30 s). A pending
-cell is estimated by the mean wall time of the recorded rows of its
-sub-family, problem and size (earlier runs of the results directory
-included), scaled by the measured overhead of references, sentinels and
-reference locks, and the remaining time is at least the costliest pending
-cell. A sub-family without any recorded row is estimated from the time caps
-of its cells times the recorded ratio of wall time to time cap, a rough
-figure whose share of the estimate is printed until its first cell finishes.
-`--validate` and the B3 logging run are not counted.
+and the elapsed time, after every cell (with `--workers`, the parent reads
+the worker CSV files every 30 s). `--validate` and the B3 logging run are not counted.
 `--list` prints the number of cells of the selected families and exits; the
 Jacobian dumps of the B10 gate land in `results/<run-id>/jac/<problem>/` (not
 committed, like `reference/`, `logs/` and `claims/`).
