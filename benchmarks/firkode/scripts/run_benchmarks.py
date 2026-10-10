@@ -1175,10 +1175,11 @@ def validation_cells() -> list[dict]:
             nncf=0,
             netf=1,
             nroots=2,
-            ngeval=182,
+            ngeval=179,
         ),
-        note=f"{EX}/firk_robertson_root.out reports 180 g evaluations; the example advances the output time after "
-        "a root return while the harness continues to the same output time, which costs one g evaluation per root",
+        note="179 g evaluations on the Linux workstation of the sweeps; "
+        f"{EX}/firk_robertson_root.out reports 180 (the example advances the output time after a root "
+        "return, the harness continues to the same output time)",
     )
     order_common = FIXED_ARGS + ["--stage-epslin", "1e-3", "--maxsteps", "100000"]
     for k, (h, err) in enumerate(
@@ -1271,8 +1272,8 @@ def validation_cells() -> list[dict]:
             False,
             False,
         ),
-        dict(nst=9345),
-        note=VDP_NOTE,
+        dict(nst=9340),
+        note=VDP_NOTE + "; 9340 steps on the Linux workstation of the sweeps, 9345 in that file",
     )
     add(
         "firk_test_vdp_1e-4",

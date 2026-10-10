@@ -291,9 +291,11 @@ with `nworkers` > 1.
 the counters with their `.out` files by the criterion `test/testRunner`
 applies to answer files (integers within 10 percent, floats to 4 digits;
 Krylov paths and replicas of a different program by a stated relative
-tolerance). Direct-solver replicas match exactly on the platform that
-generated the answer files, but root-search counts and long tight-tolerance
-runs differ in the last bits on other platforms; `validation.csv` and the
+tolerance). Root-search counts and long tight-tolerance runs differ in the
+last bits between platforms; where the counters of the Linux workstation
+that runs the full sweeps differ from an answer file, the replica expects the
+Linux value (the note gives the answer file's), so the direct-solver replicas
+match exactly on that workstation. `validation.csv` and the
 console record whether each replica matched exactly. The validation also
 runs `--check-split` on every splitting (residual below 1e-13, Jacobian
 differences below 1e-6) and `--check-domeig` on every eigenvalue bound

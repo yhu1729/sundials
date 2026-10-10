@@ -132,8 +132,10 @@ runs before and after every family in every worker; its rows are in
 `--validate` replicates repository examples and tests and compares their counters with the
 answer files by the criterion `test/testRunner` applies to them (integers within 10 percent,
 floats to 4 digits; Krylov paths within a stated relative tolerance); the table marks the
-replicas that match exactly, as the direct-solver replicas do on the platform that generated
-the answer files. The sweeps run only if every replica passes.
+replicas that match exactly. Where the counters of the Linux workstation that runs the sweep
+differ from an answer file in the last bits (a root search, a long run at a tight tolerance),
+the replica expects the Linux value, so that the direct-solver replicas match exactly on that
+workstation. The sweeps run only if every replica passes.
 
 <!-- begin generated: validation -->
 [pending]
