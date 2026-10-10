@@ -2027,10 +2027,11 @@ def spawn_workers(args, progress: Progress | None = None) -> int:
         if skip:
             skip -= 1
             continue
-        if a in ("--workers",):
+        # the B3 logging run is serial and runs in the parent after the workers
+        if a in ("--workers", "--log-bin"):
             skip = 1
             continue
-        if a.startswith("--workers="):
+        if a.startswith(("--workers=", "--log-bin=")):
             continue
         if a in (
             "--pin",
@@ -2218,6 +2219,34 @@ def run_b3_log(args, env: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
+def check_flags(ap: argparse.ArgumentParser, args) -> None:
+    """Reject flag combinations whose flags would be ignored or that would do
+    needless work (an argparse error, exit code 2)."""
+    if args.workers < 0:
+        ap.error("--workers must be >= 0")
+    if args.pin and args.workers <= 1:
+        ap.error("--pin binds the worker processes of --workers N (N > 1) to cores")
+    if args.validate_only:
+        ignored = [
+            flag
+            for flag, given in (
+                ("--family", bool(args.family)),
+                ("--list", args.list),
+                ("--workers", args.workers > 0),
+                ("--fast", args.fast is not None),
+                ("--progress", args.progress),
+                ("--log-bin", args.log_bin is not None),
+                ("--include-large", args.include_large),
+                ("--retry-failed", args.retry_failed),
+            )
+            if given
+        ]
+        if ignored:
+            ap.error("--validate-only runs the replicas only; drop " + ", ".join(ignored))
+    if args.list and args.validate:
+        ap.error("--list prints the cell counts only; drop --validate")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--bin", required=True, help="path to firkode_benchmark (Release build)")
@@ -2264,7 +2293,9 @@ def main() -> int:
         help="run the sweep with this many worker processes (one cell at a time each), "
         "then merge their CSV files",
     )
-    ap.add_argument("--pin", action="store_true", help="pin each worker to a core (taskset)")
+    ap.add_argument(
+        "--pin", action="store_true", help="pin each worker of --workers N to a core (taskset)"
+    )
     ap.add_argument(
         "--progress",
         action="store_true",
@@ -2287,6 +2318,7 @@ def main() -> int:
         help="hardware description recorded in provenance.json when sysctl is unavailable (sandbox)",
     )
     args = ap.parse_args()
+    check_flags(ap, args)
 
     env = dict(os.environ)
     env.setdefault("OMP_NUM_THREADS", "1")
@@ -2305,6 +2337,26 @@ def main() -> int:
         for base, count in merge_results(results).items():
             print(f"merged {base}.csv: {count} rows")
         return 0
+    # the families before any work: an unknown name, a missing --ref-bin and
+    # --list end the run before the validation and the provenance record
+    families = resolve_families(args.family)
+    if args.list:
+        total = 0
+        for name in families:
+            cells = FAMILY_BUILDERS[name](args.include_large)
+            timed = sum(1 for c in cells if c.timed)
+            print(f"{name}: {len(cells)} cells ({timed} timed)")
+            total += len(cells)
+        print(f"total: {total}")
+        return 0
+    if not args.ref_bin and NEEDS_REF_BIN.intersection(families):
+        print(
+            "families "
+            + ", ".join(sorted(NEEDS_REF_BIN.intersection(families)))
+            + " need the extended-precision build for their references (--ref-bin)",
+            file=sys.stderr,
+        )
+        return 1
     if args.clear_claims:
         print(f"removed {clear_claims(results)} claims")
     if args.worker is not None and args.nworkers < 1:
@@ -2349,24 +2401,6 @@ def main() -> int:
             )
             return 1
 
-    families = resolve_families(args.family)
-    if not args.list and not args.ref_bin and NEEDS_REF_BIN.intersection(families):
-        print(
-            "families "
-            + ", ".join(sorted(NEEDS_REF_BIN.intersection(families)))
-            + " need the extended-precision build for their references (--ref-bin)",
-            file=sys.stderr,
-        )
-        return 1
-    if args.list:
-        total = 0
-        for name in families:
-            cells = FAMILY_BUILDERS[name](args.include_large)
-            timed = sum(1 for c in cells if c.timed)
-            print(f"{name}: {len(cells)} cells ({timed} timed)")
-            total += len(cells)
-        print(f"total: {total}")
-        return 0
     progress = None
     if args.progress and not worker_mode:
         plan = []
@@ -2374,14 +2408,18 @@ def main() -> int:
             plan += pending_cells(FAMILY_BUILDERS[name](args.include_large), args)
         progress = Progress(plan, results)
         print(progress.report(), flush=True)
+    rc = 0
     if args.workers > 1 and not worker_mode:
-        return spawn_workers(args, progress)
-    for name in families:
-        cells = FAMILY_BUILDERS[name](args.include_large)
-        run_family(name, cells, args, env, progress)
-    if args.log_bin and "B3" in families:
+        rc = spawn_workers(args, progress)
+    else:
+        for name in families:
+            cells = FAMILY_BUILDERS[name](args.include_large)
+            run_family(name, cells, args, env, progress)
+    # serial, in this process: after the workers of a parallel run (which are
+    # started without --log-bin)
+    if args.log_bin and "B3" in families and not worker_mode:
         run_b3_log(args, env)
-    return 0
+    return rc
 
 
 if __name__ == "__main__":

@@ -254,7 +254,8 @@ is recomputed then (`--workers` combines with it).
 `--progress` prints the number of finished cells of the selected families
 and the elapsed time, after every cell (with `--workers`, the parent reads
 the worker CSV files every 60 s). `--validate` and the B3 logging run are not counted.
-`--list` prints the number of cells of the selected families and exits; the
+`--list` prints the number of cells of the selected families and exits
+(without the validation and without a provenance record); the
 Jacobian dumps of the B10 gate land in `results/<run-id>/jac/<problem>/` (not
 committed, like `reference/`, `logs/` and `claims/`).
 
@@ -268,7 +269,14 @@ $PY benchmarks/firkode/scripts/run_benchmarks.py \
 
 `--workers N` starts N worker processes (each runs one cell at a time with
 `OMP_NUM_THREADS=1`; `--pin` binds worker k to a core with `taskset` where
-available). The workers share the deterministic cell list of every family
+available, and needs N > 1). `--validate` runs the replicas once, in the
+parent, before the workers start (none starts if a replica fails), and the
+B3 logging run of `--log-bin` runs in the parent after the workers. The
+driver refuses flags that would be ignored: `--pin` without `--workers N`
+(N > 1), `--validate-only` with sweep flags (`--family`, `--list`,
+`--workers`, `--fast`, `--progress`, `--log-bin`, `--include-large`,
+`--retry-failed`), `--list` with `--validate`, and a negative `--workers`.
+The workers share the deterministic cell list of every family
 and claim cells dynamically through atomic claim files in
 `results/<run-id>/claims/`, expensive cells (by their time cap) first, so
 the load balances without a fixed shard assignment. Each worker appends to
