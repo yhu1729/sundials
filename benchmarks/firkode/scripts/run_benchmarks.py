@@ -1293,7 +1293,7 @@ def run_family(name: str, cells: list[Cell], args, env: dict, progress=None) -> 
 
 # how often the parent of --workers reads the worker CSV files, and the
 # longest silence between two progress lines while no cell finishes
-PROGRESS_POLL_S = 30.0
+PROGRESS_POLL_S = 60.0
 PROGRESS_QUIET_S = 60.0
 
 
