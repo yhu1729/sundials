@@ -1092,19 +1092,21 @@ def validation_cells() -> list[dict]:
             False,
         ),
         dict(
-            nst=199,
-            nfe=1197,
-            nni=331,
-            nsli=1905,
-            nli=363,
-            njtv=6078,
-            nsetups=117,
-            netf=10,
-            npe=117,
-            nps=6290,
+            nst=198,
+            nfe=1190,
+            nni=329,
+            nsli=1887,
+            nli=364,
+            njtv=6025,
+            nsetups=116,
+            netf=9,
+            npe=116,
+            nps=6235,
         ),
         tol=0.05,
-        note=f"{EX}/firk_diurnal_kry.out (Krylov path)",
+        note="the counts of the Linux workstation of the sweeps (Krylov path); "
+        f"{EX}/firk_diurnal_kry.out reports nst=199 nfe=1197 nni=331 nsli=1905 nli=363 njtv=6078 "
+        "nsetups=117 netf=10 npe=117 nps=6290",
     )
     add(
         "firk_heat1D_fem_mass",
@@ -1181,7 +1183,8 @@ def validation_cells() -> list[dict]:
         f"{EX}/firk_robertson_root.out reports 180 (the example advances the output time after a root "
         "return, the harness continues to the same output time)",
     )
-    order_common = FIXED_ARGS + ["--stage-epslin", "1e-3", "--maxsteps", "100000"]
+    # firk_test_order integrates to tf without a stop time and interpolates
+    order_common = FIXED_ARGS + ["--stage-epslin", "1e-3", "--no-tstop", "--maxsteps", "100000"]
     for k, (h, err) in enumerate(
         [(0.02, 9.3065e-07), (0.01, 2.9403e-08), (0.005, 9.2170e-10), (0.0025, 2.8888e-11)]
     ):
@@ -1205,8 +1208,8 @@ def validation_cells() -> list[dict]:
             tol=1e-4,
             note=f"{UT}/firk_test_order_kpr_3.out",
         )
-    # the answer file lists the steps taken (11 at h = 0.1: one step was retried
-    # after a Newton failure with a stale Jacobian)
+    # the answer file lists the steps taken (11 at h = 0.1: ten steps of 0.1 end
+    # just short of t = 1 in floating point, and an eleventh step passes it)
     for k, (h, nst, err) in enumerate(
         [
             (0.2, 5, 3.3880e-09),
@@ -1403,9 +1406,7 @@ def validation_cells() -> list[dict]:
         ),
         dict(nst=1120, nst_att=1124, nfe=141974, netf=4, ndomeig=1, lsrk_max_stages=199),
         tol=0.10,
-        note="examples/arkode/C_serial/ark_analytic_lsrk.out was generated on another platform; the "
-        "example compiled here against the same library gives nst=1122 nst_att=1125 nfe=141857 netf=3 "
-        "and 200 stages, which the harness reproduces exactly",
+        note="examples/arkode/C_serial/ark_analytic_lsrk.out",
     )
     # ark_kpr_mri slow_type fast_type hs: outputs every 0.1 to t = 5, slow and
     # fast steps fixed (hf = hs / w with w = 100), the example's tolerances
@@ -1564,9 +1565,7 @@ def validation_cells() -> list[dict]:
         ),
         dict(nst=1577, nfe=2197, nni=2194, nsetups=272, nje=29, netf=147),
         tol=0.10,
-        note="examples/cvode/CXX_serial/cv_kpr.out was generated on another platform; the example compiled here "
-        "against the same Release library gives nst=1561 nfe=2117 nni=2114 nsetups=253 nje=29 netf=133, "
-        "which the harness reproduces exactly",
+        note="examples/cvode/CXX_serial/cv_kpr.out",
     )
     add(
         "idaRoberts_dns",

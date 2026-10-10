@@ -539,10 +539,6 @@ Nothing under `src/` or `include/` is changed for this suite.
   value restores the default (25). The harness never passes a negative value.
 - **ARKODE: `ARKStepSetOptimalParams`** is deprecated without a replacement and its parameter
   sets were tuned for older default tables [verified, `src/arkode/arkode_arkstep_io.c`].
-- **ARKODE: answer file of `ark_analytic_lsrk`** was generated on another platform: the
-  example built here gives nst 1122, attempts 1125, 3 error-test failures and 200 stages
-  against 1120, 1124, 4 and 199 in the file [measured in the validation]; the replica uses
-  a relative tolerance of 0.10.
 - **FIRKODE: the default stacked FGMRES space on a fixed large step** [development]: on
   SECTOR with ten distinct real stiff modes (m = 10, theta = 0, r in [1, 1e3] or [1, 1e6])
   and fixed steps h >= 0.0078, the stacked FGMRES (6s = 18 iterations, no restart) fails to
