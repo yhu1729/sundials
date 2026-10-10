@@ -37,6 +37,7 @@
  * -----------------------------------------------------------------*/
 
 #include <cmath>
+#include <stdexcept>
 #include <vector>
 
 #include <nvector/nvector_serial.h>

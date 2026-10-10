@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 
 #include <nvector/nvector_serial.h>
