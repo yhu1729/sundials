@@ -2040,6 +2040,7 @@ def spawn_workers(args, progress: Progress | None = None) -> int:
             "--merge",
             "--clear-claims",
             "--progress",
+            "--verbose",
         ):
             continue
         worker_argv.append(a)
@@ -2057,7 +2058,8 @@ def spawn_workers(args, progress: Progress | None = None) -> int:
             cmd = ["taskset", "-c", str(cores[k % len(cores)])] + cmd
         log = (logs / f"worker{k}.log").open("a")
         procs.append((k, subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT), log))
-        print(f"started worker {k}: {' '.join(cmd)}", flush=True)
+        if args.verbose:
+            print(f"started worker {k}: {' '.join(cmd)}", flush=True)
     rc = 0
     last_report = time.monotonic()
     for k, proc, log in procs:
@@ -2311,6 +2313,11 @@ def main() -> int:
         "--clear-claims",
         action="store_true",
         help="remove stale cell claims before running (after a worker died)",
+    )
+    ap.add_argument(
+        "--verbose",
+        action="store_true",
+        help="use verbose output",
     )
     ap.add_argument(
         "--machine-note",
