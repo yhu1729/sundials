@@ -78,6 +78,11 @@ extern "C" {
 #define FIRK_UNREC_RHSFUNC_ERR -11
 #define FIRK_RTFUNC_FAIL       -12
 
+#define FIRK_MASSINIT_FAIL  -14
+#define FIRK_MASSSETUP_FAIL -15
+#define FIRK_MASSSOLVE_FAIL -16
+#define FIRK_MASSMULT_FAIL  -18
+
 #define FIRK_MEM_FAIL     -20
 #define FIRK_MEM_NULL     -21
 #define FIRK_ILL_INPUT    -22
@@ -88,18 +93,9 @@ extern "C" {
 #define FIRK_TOO_CLOSE    -27
 #define FIRK_VECTOROP_ERR -28
 
-#define FIRK_CONTEXT_ERR -32
-
-#define FIRK_MASSINIT_FAIL     -40
-#define FIRK_MASSSETUP_FAIL    -41
-#define FIRK_MASSSOLVE_FAIL    -42
-#define FIRK_MASSFREE_FAIL     -43
-#define FIRK_MASSMULT_FAIL     -44
-#define FIRK_INVALID_TABLE     -45
-#define FIRK_TABLE_FAIL        -46
-#define FIRK_CONTROLLER_ERR    -47
-#define FIRK_STEPPER_ERR       -48
-#define FIRK_ORDER_CHANGE_FAIL -49
+/* the values of ARK_INVALID_TABLE and ARK_CONTROLLER_ERR */
+#define FIRK_TABLE_FAIL     -44
+#define FIRK_CONTROLLER_ERR -50
 
 #define FIRK_UNRECOGNIZED_ERR -99
 

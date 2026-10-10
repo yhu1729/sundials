@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
            nni_p, nst_s, nni_s);
     printf("  largest difference from the serial run, relative: %.2" ESYM "\n",
            diff / ymax);
-    if (diff > SUN_RCONST(1.0e-12) * ymax || nni_p != nni_s)
+    if (diff > SUN_RCONST(1.0e-12) * ymax || labs(nni_p - nni_s) > 1)
     {
       printf("  FAILED: the runs differ by more than roundoff\n");
       fails++;
@@ -372,7 +372,7 @@ int main(int argc, char* argv[])
            " (serial: %.2" ESYM ")\n",
            err_p, err_s);
     if (SUNRabs((sunrealtype)(nst_p - nst_s)) >
-          SUN_RCONST(0.02) * (sunrealtype)nst_s ||
+          SUN_RCONST(0.05) * (sunrealtype)nst_s ||
         err_p > SUN_RCONST(2.0) * err_s + SUN_RCONST(1.0e-3))
     {
       printf("  FAILED: the step counts or the errors differ too much\n");

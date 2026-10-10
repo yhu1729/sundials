@@ -214,6 +214,88 @@ int main(void)
                    FIRK_ILL_INPUT,
                  "an unknown Gram-Schmidt name is FIRK_ILL_INPUT");
 
+  /* every key of the parser dispatches to a setter, one key per call; the
+     mass keys reach the mass interface, which is not attached, the solution
+     scaling its matrix-free solver, and the root warning the rootfinding
+     module, which has no problem */
+  {
+    struct key_value
+    {
+      const char* key;
+      const char* v1;
+      const char* v2;
+      int expected;
+    };
+    static const struct key_value kv[] =
+      {{"max_conv_fails", "10", NULL, FIRK_SUCCESS},
+       {"max_err_test_fails", "7", NULL, FIRK_SUCCESS},
+       {"max_hnil_warns", "10", NULL, FIRK_SUCCESS},
+       {"max_nonlin_iters", "7", NULL, FIRK_SUCCESS},
+       {"num_stages", "3", NULL, FIRK_SUCCESS},
+       {"order", "5", NULL, FIRK_SUCCESS},
+       {"predictor_method", "0", NULL, FIRK_SUCCESS},
+       {"small_num_efails", "2", NULL, FIRK_SUCCESS},
+       {"error_refilter", "1", NULL, FIRK_SUCCESS},
+       {"interpolate_stop_time", "1", NULL, FIRK_SUCCESS},
+       {"newton_count_safety", "1", NULL, FIRK_SUCCESS},
+       {"linear_solution_scaling", "1", NULL, FIRKLS_ILL_INPUT},
+       {"stage_solver_maxl", "5", NULL, FIRK_SUCCESS},
+       {"stage_solver_max_restarts", "0", NULL, FIRK_SUCCESS},
+       {"max_num_steps", "500", NULL, FIRK_SUCCESS},
+       {"jac_eval_frequency", "51", NULL, FIRK_SUCCESS},
+       {"lsetup_frequency", "20", NULL, FIRK_SUCCESS},
+       {"init_step", "0.01", NULL, FIRK_SUCCESS},
+       {"min_step", "1e-6", NULL, FIRK_SUCCESS},
+       {"max_step", "1.0", NULL, FIRK_SUCCESS},
+       {"fixed_step", "0.1", NULL, FIRK_SUCCESS},
+       {"stop_time", "2.0", NULL, FIRK_SUCCESS},
+       {"error_bias", "1.5", NULL, FIRK_SUCCESS},
+       {"safety_factor", "0.9", NULL, FIRK_SUCCESS},
+       {"max_growth", "10.0", NULL, FIRK_SUCCESS},
+       {"max_first_growth", "100.0", NULL, FIRK_SUCCESS},
+       {"min_reduction", "0.2", NULL, FIRK_SUCCESS},
+       {"max_efail_growth", "0.3", NULL, FIRK_SUCCESS},
+       {"max_cfail_growth", "0.25", NULL, FIRK_SUCCESS},
+       {"nonlin_conv_coef", "0.1", NULL, FIRK_SUCCESS},
+       {"nonlin_divergence_rate", "0.9", NULL, FIRK_SUCCESS},
+       {"nonlin_rate_exponent", "0.8", NULL, FIRK_SUCCESS},
+       {"jac_reuse_conv_rate", "0.001", NULL, FIRK_SUCCESS},
+       {"jac_bad_conv_rate", "1.0", NULL, FIRK_SUCCESS},
+       {"delta_gamma_max_lsetup", "0.3", NULL, FIRK_SUCCESS},
+       {"delta_gamma_max_bad_jac", "0.2", NULL, FIRK_SUCCESS},
+       {"eps_lin", "0.05", NULL, FIRK_SUCCESS},
+       {"ls_norm_factor", "1.0", NULL, FIRK_SUCCESS},
+       {"stage_eps_lin", "0.05", NULL, FIRK_SUCCESS},
+       {"mass_eps_lin", "0.05", NULL, FIRKLS_MASSMEM_NULL},
+       {"mass_ls_norm_factor", "1.0", NULL, FIRKLS_MASSMEM_NULL},
+       {"scalar_tolerances", "1e-6", "1e-8", FIRK_SUCCESS},
+       {"fixed_step_bounds", "0.9", "1.1", FIRK_SUCCESS},
+       {"reuse_policy", "radau5", NULL, FIRK_SUCCESS},
+       {"adapt_controller_by_name", "ImpGus", NULL, FIRK_SUCCESS},
+       {"stage_solver_gs_type", "modified", NULL, FIRK_SUCCESS},
+       {"clear_stop_time", NULL, NULL, FIRK_SUCCESS},
+       {"no_inactive_root_warn", NULL, NULL, FIRK_ILL_INPUT}};
+    int k, n, retval;
+    char key[64], what[160];
+    const char* src[4];
+    for (k = 0; k < NARGS(kv); k++)
+    {
+      snprintf(key, sizeof(key), "firkode.%s", kv[k].key);
+      src[0] = "prog";
+      src[1] = key;
+      n      = 2;
+      if (kv[k].v1 != NULL) { src[n++] = kv[k].v1; }
+      if (kv[k].v2 != NULL) { src[n++] = kv[k].v2; }
+      retval = set_options(mem, NULL, src, n);
+      snprintf(what, sizeof(what), "key %s dispatches to its setter (%d)",
+               kv[k].key, retval);
+      fails += check(retval == kv[k].expected, what);
+    }
+    /* the keys above set a fixed step and a stop time */
+    fails += check(FIRKodeSetFixedStep(mem, ZERO) == FIRK_SUCCESS,
+                   "the fixed step is cleared again");
+  }
+
   /* another prefix */
   fails += check(set_options(mem, "myode", custom_src, NARGS(custom_src)) ==
                      FIRK_SUCCESS &&

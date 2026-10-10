@@ -908,7 +908,7 @@ def provenance_table(prov: dict):
         ),
         ("Threads", str(prov.get("env"))),
         ("Run started (UTC)", prov.get("started_utc")),
-        ("Binary SHA-256", prov.get("binary_sha256", "")[:16] + "..."),
+        ("Binary SHA-256", prov.get("binary_sha256", "")),
     ]
     return md_table(["item", "value"], [[k, v] for k, v in items])
 

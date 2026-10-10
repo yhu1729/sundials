@@ -54,9 +54,9 @@ These items model C control flow over the rationals or reals.
 
 | # | Component | Lean |
 |---|---|---|
-| R23 | Uniqueness of the real root behind each odd-s the `gamma0` literals literal | `RootCount.uniqueRootIn_spec`, `RootCount.gamma0_odd_unique`, from `RuleOfSigns` |
+| R23 | Uniqueness of the real root behind each odd-s `gamma0` literal | `RootCount.uniqueRootIn_spec`, `RootCount.gamma0_odd_unique`, from `RuleOfSigns` |
 | R2, s ≤ 9 | The Radau nodes exist for every stage count FIRKODE supports, one in each bracket of the grid scan | `Nodes.radauNodes` with `radauNodes_nodePoly`, `radauNodes_strictMono`, `radauNodes_pos`, `radauNodes_last`, `radauNodes_bracket` |
-| R3, s ≤ 9 | `det(I − zA)` is the Padé denominator, and the real eigenvalues of `A` are the real roots of `det(μI − A)`, for every stage count FIRKODE supports; hence the the `gamma0` literals comment for odd s, and no real eigenvalue for even s | `Charpoly.radau_charpolyRev`, `Charpoly.radau_isEigen_iff`, `Charpoly.radau_gamma0_odd_inv`, `Charpoly.radau_even_no_real_eigenvalue` |
+| R3, s ≤ 9 | `det(I − zA)` is the Padé denominator, and the real eigenvalues of `A` are the real roots of `det(μI − A)`, for every stage count FIRKODE supports; hence the `gamma0` literals comment for odd s, and no real eigenvalue for even s | `Charpoly.radau_charpolyRev`, `Charpoly.radau_isEigen_iff`, `Charpoly.radau_gamma0_odd_inv`, `Charpoly.radau_even_no_real_eigenvalue` |
 | R4, s ≤ 9 | A-stability and L-stability of the Radau IIA methods, by an energy identity instead of the cited E-polynomial and Routh–Hurwitz criteria | `Colloc.energy_identity`, `Colloc.radau_A_stable`, `Colloc.radau_L_stable` |
 | R1 in part | D(s−1) for every s from B(2s−1) and C(s); with the failures of B(2s), C(s+1) and D(s), `FIRKodeTable_CheckOrder` returns `(2s − 1, s, s − 1, 2s − 1)` in exact arithmetic for s ≤ 9 (also the exact part of R16) | `Colloc.collocA_D`, `Colloc.collocA_not_C_succ`, `Colloc.collocA_not_D`, `CheckOrder.radau_checkOrder` |
 | R24 in part | The node and coefficient literals of every built-in table are the Radau IIA tables to their printed digits, and the s ≤ 3 literals are the closed forms to 10⁻³⁹ | `NodePoly.literal_nodes`, `NodePoly.literal_coefficients`, `Tables.literal_closedForm` |

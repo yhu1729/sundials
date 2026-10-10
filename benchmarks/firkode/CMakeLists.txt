@@ -36,6 +36,7 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
             sundials_sunlinsolpcg
             sundials_sunlinsolspgmr
             ${EXE_EXTRA_LINK_LIBS})
+  add_dependencies(benchmark firk_klin)
 
   install(TARGETS firk_klin
           DESTINATION "${SUNDIALS_BENCHMARKS_INSTALL_PATH}/firkode")
@@ -102,9 +103,10 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
     # problems/kpr.hpp and problems/pr.hpp are shared with the unit tests
     target_include_directories(
       firkode_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-                            ${SUNDIALS_SOURCE_DIR}/test/unit_tests)
+                                ${SUNDIALS_SOURCE_DIR}/test/unit_tests)
 
-    target_link_libraries(firkode_benchmark PRIVATE ${libs} ${EXE_EXTRA_LINK_LIBS})
+    target_link_libraries(firkode_benchmark PRIVATE ${libs}
+                                                    ${EXE_EXTRA_LINK_LIBS})
 
     add_dependencies(benchmark firkode_benchmark)
 
@@ -114,7 +116,9 @@ if(SUNDIALS_ENABLE_FIRKODE AND CXX_FOUND)
     message(STATUS "Added FIRKODE benchmark harness firkode_benchmark")
 
   else()
-    message(STATUS "Skipping firkode_benchmark (requires double or extended precision)")
+    message(
+      STATUS
+        "Skipping firkode_benchmark (requires double or extended precision)")
   endif()
 
   install(FILES README.md

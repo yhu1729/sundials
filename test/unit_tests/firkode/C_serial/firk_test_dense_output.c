@@ -26,7 +26,9 @@
  * 1e5 u (1e-4 and 1e-3 in single precision); for degree s + 1 the value
  * error exceeds 1e-8; FIRKodeGetDky rejects t outside the last step with
  * FIRK_BAD_T (before the first step it accepts t0 only) and k = s + 1 with
- * FIRK_BAD_K, and accepts k = s.
+ * FIRK_BAD_K, and accepts k = s; after FIRKodeReset only the value at the
+ * reset time is available (k = 0 at that time succeeds, a derivative and an
+ * earlier time are FIRK_BAD_T).
  *
  * Usage: firk_test_dense_output [stages]
  * ---------------------------------------------------------------------------*/
@@ -182,6 +184,15 @@ static int run(SUNContext sunctx, int s, int deg, sunrealtype* maxerr0,
   }
   if (FIRKodeGetDky(mem, t, s + 1, dky) != FIRK_BAD_K) { *range_ok = 0; }
   if (FIRKodeGetDky(mem, t, s, dky) != FIRK_SUCCESS) { *range_ok = 0; }
+
+  /* after a reset the interpolant of the last step is gone */
+  if (FIRKodeReset(mem, t, y) != FIRK_SUCCESS) { *range_ok = 0; }
+  if (FIRKodeGetDky(mem, t, 0, dky) != FIRK_SUCCESS) { *range_ok = 0; }
+  if (FIRKodeGetDky(mem, t, 1, dky) != FIRK_BAD_T) { *range_ok = 0; }
+  if (FIRKodeGetDky(mem, t - SUN_RCONST(0.5) * h, 0, dky) != FIRK_BAD_T)
+  {
+    *range_ok = 0;
+  }
 
   FIRKodeFree(&mem);
   SUNLinSolFree(LS);

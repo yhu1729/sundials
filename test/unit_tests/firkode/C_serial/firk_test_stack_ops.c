@@ -32,7 +32,9 @@
  * - H16: the weight view is never cloned (and ASan sees its destruction);
  * - H14: no vector is cloned during the steps (a counting clone on y0);
  *   a clone failure at any point of FIRKodeInit returns FIRK_MEM_FAIL and
- *   leaves an integrator that FIRKodeFree releases;
+ *   leaves an integrator without vectors (the tolerance functions return
+ *   FIRK_NO_MALLOC, also after a failed second Init) that a later Init
+ *   completes and that FIRKodeFree releases;
  * - one stage has no stack.
  *
  * Pass criterion: no trapped operation, no clone per step, a zero guess
@@ -494,9 +496,30 @@ static int check_clone_failures(SUNContext sunctx)
              "FIRK_MEM_FAIL (flag %d)",
              k, ninit, flag);
     fails += check(nfailed == 1 && flag == FIRK_MEM_FAIL, what);
+    fail_at = 0;
+    fails +=
+      check(FIRKodeSVtolerances(mem, SUN_RCONST(1.0e-6), y) == FIRK_NO_MALLOC,
+            "no tolerances without vectors");
+    fails +=
+      check(FIRKodeInit(mem, f, ZERO, y) == FIRK_SUCCESS &&
+              FIRKodeSVtolerances(mem, SUN_RCONST(1.0e-6), y) == FIRK_SUCCESS,
+            "a later Init completes the integrator");
     FIRKodeFree(&mem);
   }
+
+  /* a failure in a second Init leaves an integrator without vectors */
+  mem = FIRKodeCreate(sunctx);
+  if (FIRKodeInit(mem, f, ZERO, y)) { return 1; }
+  nclones = 0;
+  nfailed = 0;
+  fail_at = 1;
+  flag    = FIRKodeInit(mem, f, ZERO, y);
   fail_at = 0;
+  fails += check(nfailed == 1 && flag == FIRK_MEM_FAIL,
+                 "H14: a clone failure in a second Init returns FIRK_MEM_FAIL");
+  fails += check(FIRKodeSVtolerances(mem, SUN_RCONST(1.0e-6), y) == FIRK_NO_MALLOC,
+                 "no tolerances after a failed second Init");
+  FIRKodeFree(&mem);
   N_VDestroy(y);
   return fails;
 }

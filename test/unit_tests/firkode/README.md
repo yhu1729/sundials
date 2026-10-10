@@ -94,7 +94,7 @@ Rows without a unit test:
 | M1: modes and the EXPERT gate                                      | `firk_test_mode`                                                                                                                   |
 | M2: estimate order p = 3; dense and iterative estimates within 50% | `firk_test_errest`                                                                                                                 |
 | M2: Robertson and van der Pol accuracy and cost                    | `firk_test_robertson`, `firk_test_vdp`                                                                                             |
-| M2: steps within 20% of `radau5.f`, error within twice its own or below half the tolerance | `firk_test_radau5_steps` (reads `radau5/*.ref`)                                                               |
+| M2: steps within 20% of `radau5.f`; error within twice its own or below half the tolerance (today every cell passes on the latter, two with ratios 3.6 and 23, see the test header) | `firk_test_radau5_steps` (reads `radau5/*.ref`) |
 | M2: the automatic Newton tolerance (RADAU5's rule)                 | `firk_test_nlscoef`                                                                                                                |
 | M2: stop time, reset, roots, options, logging                      | `firk_test_tstop`, `firk_test_reset`, `firk_test_root`, `firk_test_rootfind`, `firk_test_options`, `firk_test_logging`             |
 | M2: every recoverable-failure path                                 | `firk_test_recoverable`, `firk_test_newton`                                                                                        |

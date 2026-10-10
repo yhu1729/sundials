@@ -22,16 +22,19 @@
 #   run_benchmarks.py --bin build-benchmark/benchmarks/firkode/firkode_benchmark \
 #       --results benchmarks/firkode/results/<run-id> [--validate] \
 #       [--family B1 B4 ... | --family all] [--fast [SECONDS]] [--include-large] \
-#       [--log-bin build-benchmark-log/benchmarks/firkode/firkode_benchmark]
+#       [--log-bin build-benchmark-log/benchmarks/firkode/firkode_benchmark] \
+#       [--workers N] [--progress]
 # -----------------------------------------------------------------
 """Sweep driver for the FIRKODE benchmark suite."""
 
 from __future__ import annotations
 
 import argparse
+import csv
 import dataclasses
 import datetime as dt
 import hashlib
+import io
 import math
 import os
 import re
@@ -39,6 +42,7 @@ import shutil
 import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -1072,6 +1076,8 @@ def run_cell(
     reps_opt: str,
     budget: float | None = None,
 ) -> dict:
+    # the key of the cell as planned, before --dump-dir is made absolute
+    key = cell.key()
     extra = []
     if ref_path is not None:
         extra += ["--ref", str(ref_path)]
@@ -1085,7 +1091,7 @@ def run_cell(
     cmd = cell.command(binary, extra)
     # --fast: the budget bounds the pilot run and the repetitions of a cell
     cap = cell.cap_s if budget is None else min(cell.cap_s, budget)
-    row, flag, wall = run_binary(cmd, cap, env, logs / f"{sanitize(cell.key())}.err")
+    row, flag, wall = run_binary(cmd, cap, env, logs / f"{sanitize(key)}.err")
     if flag == "TIMEOUT" and budget is not None and cap < cell.cap_s:
         flag = "FAST_TIMEOUT"
     reps = 1
@@ -1096,13 +1102,13 @@ def run_cell(
         if reps > 1:
             cmd2 = cell.command(binary, extra + ["--reps", str(reps)])
             row2, flag2, wall2 = run_binary(
-                cmd2, cap * reps + 60, env, logs / f"{sanitize(cell.key())}.err"
+                cmd2, cap * reps + 60, env, logs / f"{sanitize(key)}.err"
             )
             if flag2 == "ok" and row2 is not None:
                 row, flag, wall = row2, flag2, wall + wall2
     out = {
         "family": cell.family,
-        "cell_key": cell.key(),
+        "cell_key": key,
         "label": cell.label,
         "params": cell.params_str(),
         "driver_flag": flag,
@@ -1167,20 +1173,12 @@ def run_sentinel(
     )
 
 
-def run_family(name: str, cells: list[Cell], args, env: dict) -> None:
+def pending_cells(cells: list[Cell], args) -> list[Cell]:
+    """The cells of a family still to run, in the order they run."""
     results = Path(args.results)
-    parallel = args.nworkers > 1
-    suffix = f".worker{args.worker}" if parallel else ""
-    tag = f"[w{args.worker}] " if parallel else ""
-    # sub-families (B4_fixed, B4_estimate, B7_roots, B7_dense) get their own
-    # CSV; a worker appends to its own file, merged by --merge afterwards
-    subfamilies = sorted({c.family for c in cells})
-    tables = {fam: ResultsTable(results / f"{fam}{suffix}.csv") for fam in subfamilies}
-    logs = results / "logs" / name
-    refdir = results / "reference"
     # cells already present in the merged file or in any worker file
     done = set()
-    for fam in subfamilies:
+    for fam in sorted({c.family for c in cells}):
         for path in family_files(results, fam):
             for r in read_csv(path):
                 # cells cut short by a --fast budget are redone by any run
@@ -1197,6 +1195,21 @@ def run_family(name: str, cells: list[Cell], args, env: dict) -> None:
     # expensive cells first for a short parallel tail; cheap cells first in a
     # --fast run, whose point is the quickly finishing part of the suite
     todo.sort(key=lambda c: c.cap_s if args.fast is not None else -c.cap_s)
+    return todo
+
+
+def run_family(name: str, cells: list[Cell], args, env: dict, progress=None) -> None:
+    results = Path(args.results)
+    parallel = args.nworkers > 1
+    suffix = f".worker{args.worker}" if parallel else ""
+    tag = f"[w{args.worker}] " if parallel else ""
+    # sub-families (B4_fixed, B4_estimate, B7_roots, B7_dense) get their own
+    # CSV; a worker appends to its own file, merged by --merge afterwards
+    subfamilies = sorted({c.family for c in cells})
+    tables = {fam: ResultsTable(results / f"{fam}{suffix}.csv") for fam in subfamilies}
+    logs = results / "logs" / name
+    refdir = results / "reference"
+    todo = pending_cells(cells, args)
     print(f"{tag}== {name}: {len(cells)} cells, {len(todo)} to run", flush=True)
     if not todo:
         return
@@ -1264,6 +1277,9 @@ def run_family(name: str, cells: list[Cell], args, env: dict) -> None:
             f"t={row.get('time_median', 'NA')}",
             flush=True,
         )
+        if progress is not None:
+            progress.record(row)
+            print(f"{tag}  {progress.report()}", flush=True)
     run_sentinel(args.bin, env, results, name, "end", suffix)
     print(
         f"{tag}== {name} finished in {dt.datetime.now(dt.UTC) - t_family} ({n_run} cells run here)",
@@ -1271,7 +1287,183 @@ def run_family(name: str, cells: list[Cell], args, env: dict) -> None:
     )
 
 
-def spawn_workers(args) -> int:
+# ---------------------------------------------------------------------------
+# Progress and estimated finishing time (--progress)
+# ---------------------------------------------------------------------------
+
+# how often the parent of --workers reads the worker CSV files, and the
+# longest silence between two progress lines while no cell finishes
+PROGRESS_POLL_S = 30.0
+PROGRESS_QUIET_S = 60.0
+
+
+def read_complete_rows(path: Path) -> list[dict]:
+    """Rows of a CSV file another process may be writing; a trailing partial
+    line is dropped (it is read complete at the next poll)."""
+    try:
+        text = path.read_text()
+    except FileNotFoundError:
+        return []
+    end = text.rfind("\n")
+    if end < 0:
+        return []
+    return list(csv.DictReader(io.StringIO(text[: end + 1], newline="")))
+
+
+def row_ident(row: dict) -> tuple:
+    return (row.get("family"), row.get("cell_key"), row.get("timestamp"), row.get("worker"))
+
+
+def format_duration(seconds: float) -> str:
+    seconds = max(0, round(seconds))
+    return f"{seconds // 3600}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
+
+
+class Progress:
+    """Counts the finished cells of a sweep and estimates its finishing time.
+
+    The cost of a pending cell is the mean wall time of the recorded rows (of
+    earlier runs of the results directory too) of the same sub-family,
+    problem and size, else of the same sub-family. A sub-family without any
+    recorded row is estimated from the time caps of its cells, scaled by the
+    ratio of recorded wall time to the time caps of the recorded rows; that
+    part of the estimate is order-of-magnitude only and is reported apart.
+    The cell time is scaled by the ratio of worker time to cell time of this
+    run, which accounts for the references, the sentinels and waits on
+    reference locks (the worker time of a worker ends at its last finished
+    cell, so cells still running do not count), divided among the workers,
+    and bounded below by the costliest pending cell. Rows cut short by a
+    --fast budget are cost samples only in a --fast run.
+    """
+
+    def __init__(
+        self, plan: list[Cell], cells: list[Cell], results: Path, nworkers: int, fast: float | None
+    ):
+        self.t0 = dt.datetime.now(dt.UTC)
+        self.nworkers = max(1, nworkers)
+        self.fast = fast
+        # cell keys repeat across families (B1 and B8 share cells)
+        self.pending = {(c.family, c.key()): c for c in plan}
+        self.total = len(self.pending)
+        self.n_done = 0
+        self.caps = {(c.family, c.key()): self.cap(c) for c in cells}
+        # [sum of wall_s, number of rows] per (family, problem, params) and per family
+        self.group_wall: dict[tuple, list] = {}
+        self.family_wall: dict[str, list] = {}
+        # sums of wall_s and of the time caps of the rows with a known cap
+        self.capped_wall = 0.0
+        self.capped_cap = 0.0
+        # per worker: [sum of wall_s of this run, timestamp of its last row]
+        self.worker_time: dict[str, list] = {}
+        self.families = sorted({c.family for c in plan})
+        # rows present before this run, not counted as finished by poll()
+        self.seen: set = set()
+        for fam in self.families:
+            for path in family_files(results, fam):
+                for r in read_csv(path):
+                    self.seen.add(row_ident(r))
+                    self._add_sample(r)
+
+    def cap(self, cell: Cell) -> float:
+        return cell.cap_s if self.fast is None else min(cell.cap_s, self.fast)
+
+    def _add_sample(self, row: dict) -> float:
+        wall = to_float(row.get("wall_s"))
+        if not math.isfinite(wall):
+            return 0.0
+        if self.fast is not None or row.get("driver_flag") != "FAST_TIMEOUT":
+            fam = row.get("family", "")
+            group = (fam, row.get("problem", ""), row.get("params", ""))
+            for pool, key in ((self.group_wall, group), (self.family_wall, fam)):
+                acc = pool.setdefault(key, [0.0, 0])
+                acc[0] += wall
+                acc[1] += 1
+            cap = self.caps.get((fam, row.get("cell_key")))
+            if cap:
+                self.capped_wall += wall
+                self.capped_cap += cap
+        return wall
+
+    def record(self, row: dict) -> None:
+        """Count a row written in this run (ignored unless it is a pending cell)."""
+        if self.pending.pop((row.get("family"), row.get("cell_key")), None) is None:
+            return
+        self.n_done += 1
+        wall = self._add_sample(row)
+        try:
+            stamp = dt.datetime.fromisoformat(row.get("timestamp", ""))
+        except (TypeError, ValueError):
+            stamp = dt.datetime.now(dt.UTC)
+        acc = self.worker_time.setdefault(str(row.get("worker", 0)), [0.0, stamp])
+        acc[0] += wall
+        acc[1] = max(acc[1], stamp)
+
+    def poll(self, results: Path) -> int:
+        """Count the new rows of the worker files; returns their number."""
+        before = self.n_done
+        for fam in self.families:
+            for path in sorted(results.glob(f"{fam}.worker*.csv")):
+                for r in read_complete_rows(path):
+                    ident = row_ident(r)
+                    if ident not in self.seen:
+                        self.seen.add(ident)
+                        self.record(r)
+        return self.n_done - before
+
+    def overhead(self) -> float:
+        """Worker time per unit of cell time in this run (1 before any cell finished)."""
+        span = sum((last - self.t0).total_seconds() for _, last in self.worker_time.values())
+        wall = sum(w for w, _ in self.worker_time.values())
+        return max(1.0, span / wall) if wall > 0 else 1.0
+
+    def report(self, now: dt.datetime | None = None) -> str:
+        now = now or dt.datetime.now(dt.UTC)
+        elapsed = (now - self.t0).total_seconds()
+        ratio = self.capped_wall / self.capped_cap if self.capped_cap > 0 else None
+        work, longest, from_caps, n_caps, unknown, cap_fams = 0.0, 0.0, 0.0, 0, 0, set()
+        for c in self.pending.values():
+            acc = self.group_wall.get((c.family, c.problem, c.params_str()))
+            acc = acc or self.family_wall.get(c.family)
+            if acc:
+                cost = acc[0] / acc[1]
+            elif ratio is not None:
+                cost = ratio * self.cap(c)
+                from_caps += cost
+                n_caps += 1
+                cap_fams.add(c.family)
+            else:
+                unknown += 1
+                cap_fams.add(c.family)
+                continue
+            work += cost
+            longest = max(longest, cost)
+        overhead = self.overhead()
+        remaining = max(work * overhead / self.nworkers, longest * overhead)
+        pct = 100.0 * self.n_done / self.total if self.total else 100.0
+        msg = (
+            f"progress: {self.n_done}/{self.total} cells ({pct:.1f}%), "
+            f"elapsed {format_duration(elapsed)}"
+        )
+        if self.pending and unknown < len(self.pending):
+            finish = (now + dt.timedelta(seconds=remaining)).astimezone()
+            msg += (
+                f", remaining ~{format_duration(remaining)}, "
+                f"finish ~{finish.strftime('%Y-%m-%d %H:%M %Z')}"
+            )
+        if n_caps:
+            share = 100.0 * from_caps / work if work > 0 else 100.0
+            msg += (
+                f" ({share:.0f}% of it from the time caps of {n_caps} cells of "
+                f"{', '.join(sorted(cap_fams))}, not sampled yet)"
+            )
+        elif unknown:
+            msg += (
+                f" (+{unknown} cells of {', '.join(sorted(cap_fams))} "
+                "without a cost estimate yet)"
+            )
+        return msg
+
+def spawn_workers(args, progress: Progress | None = None) -> int:
     """Run the sweep with --workers N worker processes claiming cells dynamically."""
     results = Path(args.results)
     logs = results / "logs"
@@ -1292,7 +1484,14 @@ def spawn_workers(args) -> int:
             continue
         if a.startswith("--workers="):
             continue
-        if a in ("--pin", "--validate", "--validate-only", "--merge", "--clear-claims"):
+        if a in (
+            "--pin",
+            "--validate",
+            "--validate-only",
+            "--merge",
+            "--clear-claims",
+            "--progress",
+        ):
             continue
         worker_argv.append(a)
     cores = None
@@ -1311,11 +1510,22 @@ def spawn_workers(args) -> int:
         procs.append((k, subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT), log))
         print(f"started worker {k}: {' '.join(cmd)}", flush=True)
     rc = 0
+    last_report = time.monotonic()
     for k, proc, log in procs:
-        code = proc.wait()
+        while True:
+            try:
+                code = proc.wait(timeout=PROGRESS_POLL_S if progress else None)
+                break
+            except subprocess.TimeoutExpired:
+                if progress.poll(results) or time.monotonic() - last_report >= PROGRESS_QUIET_S:
+                    print(progress.report(), flush=True)
+                    last_report = time.monotonic()
         log.close()
         print(f"worker {k} finished with exit code {code}", flush=True)
         rc = rc or code
+    if progress is not None:
+        progress.poll(results)
+        print(progress.report(), flush=True)
     merged = merge_results(results)
     for base, count in merged.items():
         print(f"merged {base}.csv: {count} rows", flush=True)
@@ -1495,6 +1705,12 @@ def main() -> int:
         "then merge their CSV files",
     )
     ap.add_argument("--pin", action="store_true", help="pin each worker to a core (taskset)")
+    ap.add_argument(
+        "--progress",
+        action="store_true",
+        help="print the finished cells of the sweep with an estimate of the remaining and the "
+        f"finishing time (after every cell, or every {PROGRESS_POLL_S:g} s with --workers)",
+    )
     ap.add_argument("--worker", type=int, default=None, help="(internal) this worker's index")
     ap.add_argument("--nworkers", type=int, default=1, help="(internal) number of workers")
     ap.add_argument(
@@ -1586,11 +1802,20 @@ def main() -> int:
             total += len(cells)
         print(f"total: {total}")
         return 0
+    progress = None
+    if args.progress and not worker_mode:
+        plan, cells = [], []
+        for name in families:
+            family_cells = FAMILY_BUILDERS[name](args.include_large)
+            cells += family_cells
+            plan += pending_cells(family_cells, args)
+        progress = Progress(plan, cells, results, max(args.workers, 1), args.fast)
+        print(progress.report(), flush=True)
     if args.workers > 1 and not worker_mode:
-        return spawn_workers(args)
+        return spawn_workers(args, progress)
     for name in families:
         cells = FAMILY_BUILDERS[name](args.include_large)
-        run_family(name, cells, args, env)
+        run_family(name, cells, args, env, progress)
     if args.log_bin and "B3" in families:
         run_b3_log(args, env)
     return 0

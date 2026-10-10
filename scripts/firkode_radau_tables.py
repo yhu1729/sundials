@@ -261,8 +261,7 @@ def emit_region(dps):
             lines += emit_array("e", t["e"], s, None)
             lines.append(f"  .gamma0 = SUN_RCONST({literal(t['gamma0'])}),")
             lines += emit_array("P", t["P"], s, "P")
-            lines.append("  .stiffly_accurate = SUNTRUE,")
-            lines.append("  .owned = SUNFALSE};")
+            lines.append("  .stiffly_accurate = SUNTRUE};")
             lines.append("")
         lines.append(
             "static const struct FIRKodeTableMem* const firk_radau_iia[FIRK_MAX_STAGES + 1] = {"

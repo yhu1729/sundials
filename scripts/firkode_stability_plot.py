@@ -27,7 +27,7 @@
 # estimate for the Dahlquist test equation.
 #
 # Requires numpy, matplotlib and mpmath:
-#   python3 src/firkode/firkode_stability_plot.py [--outdir DIR]
+#   python3 scripts/firkode_stability_plot.py [--outdir DIR]
 #       [--smax S] [--grid N] [--dpi D]
 # ---------------------------------------------------------------
 
@@ -49,7 +49,7 @@ import numpy as np  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from numpy.polynomial import polynomial as npoly  # noqa: E402
 
-REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 from firkode_radau_tables import lagrange_coeffs, radau_table  # noqa: E402
 

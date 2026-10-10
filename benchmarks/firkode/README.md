@@ -110,16 +110,16 @@ driver).
 | `pr`        | Prothero-Robinson (`test/unit_tests/problems/pr.hpp`)              | `--n`      | [0, 1]          | band (mu = ml = 0)  | `--lambda`; exact solution             |
 | `kpr`       | Kvaerno-Prothero-Robinson (`test/unit_tests/problems/kpr.hpp`)     | 2          | [0, 1]          | dense               | exact solution                         |
 | `diurnal`   | 2-species diurnal kinetics PDE, `--mx` x `--my` grid               | 2 mx my    | [0, 86400]      | SPGMR, left prec    | block-diagonal preconditioner, jtimes  |
-| `heat2d`    | 2-D advection-diffusion, `--mx` x `--my` interior points           | mx my      | [0, 1]          | band (mu = ml = mx) | `--velocity`; matrix-free `--ls pcg`/`spgmr` with `--psolve jacobi|innerpcg` |
+| `heat2d`    | 2-D advection-diffusion, `--mx` x `--my` interior points           | mx my      | [0, 1]          | band (mu = ml = mx) | `--velocity`; matrix-free `--ls pcg`/`spgmr` with `--psolve jacobi\|innerpcg` |
 | `heat1dfem` | 1-D heat, P1 finite elements with a tridiagonal mass matrix         | `--n`      | [0, 1]          | band                | mass matrix (FIRKODE, ARKODE, IDA)     |
-| `wave1dfem` | damped 1-D elastodynamics, P1 finite elements: `[I 0; 0 M] y' = [v; -K u - C v + g(t) b]`, interleaved `(u_i, v_i)` | `2 n` | [0, 4] | band (`mu = ml = 3`), mass band 2 | `--n`, `--damping mass|kv|rayleigh`, `--alpha`, `--beta`/`--beta-omega`, `--mass consistent|lumped` (lumped: ODE form, CVODE admissible); `scripts/wave1d_fem_exact.py` checks a reference against the modal closed form |
+| `wave1dfem` | damped 1-D elastodynamics, P1 finite elements: `[I 0; 0 M] y' = [v; -K u - C v + g(t) b]`, interleaved `(u_i, v_i)` | `2 n` | [0, 4] | band (`mu = ml = 3`), mass band 2 | `--n`, `--damping mass\|kv\|rayleigh`, `--alpha`, `--beta`/`--beta-omega`, `--mass consistent\|lumped` (lumped: ODE form, CVODE admissible); `scripts/wave1d_fem_exact.py` checks a reference against the modal closed form |
 | `pollu`     | pollution kinetics of the Test Set for IVP Solvers (20 species, 25 reactions) | `20 nb` | [0, 60] | dense (`nb` = 1), band `mu = ml = 19` | `--nb` block-diagonal copies with perturbed initial states, `--tau` relaxation towards the initial state at every `--restart-every` boundary (family B11); published reference `references/pollu.ref` |
 | `ringmod`   | ring modulator of the Test Set, ODE case (`Cs` = 2e-12) | 15 | [0, 1e-3] | dense | published reference `references/ringmod.ref`; the overflow guard of the source returns a recoverable error |
 | `beam`      | elastic beam of the Test Set / E. Hairer (40 nodes) | 80 | [0, 5] | dense, difference-quotient Jacobian (no analytic one published) | published reference `references/beam.ref` (Test Set) cross-checked with Hairer's `res_exact_pic` (2.3e-11) |
 | `plate`     | rectangular plate with a moving load (E. Hairer, 8 x 5 grid) | 80 | [0, 7] | dense | published reference `references/plate.ref`; atol = 1e-3 rtol as in the published driver |
 | `detest_b5` | problem B5 of the stiff DETEST set (Enright, Hull and Lindberg 1975): `y1' = -10 y1 + 100 y2`, `y2' = -100 y1 - 10 y2`, `y3' = -4 y3`, `y4' = -y4`, `y5' = -0.5 y5`, `y6' = -0.1 y6`, `y(0) = 1`; eigenvalues `-10 +- 100 i` (84.29 degrees from the negative real axis), -4, -1, -0.5, -0.1 | 6 | [0, 20] | dense (band `mu = ml = 1`, KLU) | exact solution; transcribed from STDTST (ACM TOMS Algorithm 648), whose end-point values agree with it to 3.9e-14 (their y1, y2 carry that error; the exact values are about 1e-87) |
 | `bruss3d`   | 3-D Brusselator on the unit cube (`a` = 1, `b` = 3.4), 7-point Laplacian with Neumann conditions, interleaved `(u, v)` | `2 n^3` | [0, 10] | KLU (CSR Jacobian); band/dense for small `n` | `--n`, `--alpha` (default 1), `--pert`; family B12 (factorization-dominated) |
-| `sector`    | linear `y' = A (y - phi) + phi'` with eigenvalues `r_k (-cos theta +- i sin theta)`, `r_k` log-spaced in `[rmin, rmax]`, `A = Q blockdiag(B_k) Q` | `2 m` | [0, 10] | band (`mu = ml = 1`); dense if `--coupled 1` | exact solution; `--m --theta --rmin --rmax --coupled --delta --nonlin --forcing sine|square --period` (the square forcing is B11's switched RC ladder) |
+| `sector`    | linear `y' = A (y - phi) + phi'` with eigenvalues `r_k (-cos theta +- i sin theta)`, `r_k` log-spaced in `[rmin, rmax]`, `A = Q blockdiag(B_k) Q` | `2 m` | [0, 10] | band (`mu = ml = 1`); dense if `--coupled 1` | exact solution; `--m --theta --rmin --rmax --coupled --delta --nonlin --forcing sine\|square --period` (the square forcing is B11's switched RC ladder) |
 
 Errors of the PDE problems are measured against a tight-tolerance solution
 of the same semi-discrete system, not against the PDE solution.
@@ -135,13 +135,13 @@ firkode_benchmark --problem P --integrator I [options]
 | `--rtol R`, `--atol A`, `--atol-vec a,b,…` | tolerances (problem defaults when omitted)                               |
 | `--stages S`                             | FIRKODE stage count (this branch supports only the default, 3)             |
 | `--order Q`                              | ARKODE DIRK order 1..5 (default 4); CVODE/IDA maximum BDF order            |
-| `--ls dense|band|klu|spgmr|pcg`, `--prec`, `--maxl`, `--maxrs`, `--epslin` | linear solver settings; `klu` (sparse direct, CSR) needs a build with `SUNDIALS_ENABLE_KLU=ON` and a problem with a sparse Jacobian; IDA forms `cj I - J` in that pattern, which must then store the diagonal, and has no sparse mass matrix |
+| `--ls dense\|band\|klu\|spgmr\|pcg`, `--prec`, `--maxl`, `--maxrs`, `--epslin` | linear solver settings; `klu` (sparse direct, CSR) needs a build with `SUNDIALS_ENABLE_KLU=ON` and a problem with a sparse Jacobian; IDA forms `cj I - J` in that pattern, which must then store the diagonal, and has no sparse mass matrix |
 | `--msbp N`, `--msbj N`, `--dgmax D`, `--dgmax-jbad D` | setup and Jacobian reuse: setup frequency, Jacobian frequency, the relative change of gamma that forces a setup or a new Jacobian (CVODE; FIRKODE under `--reuse-policy periodic`; ARKODE honours `--msbp` and `--dgmax`) |
-| `--reuse-policy radau5|periodic`         | FIRKODE setup-reuse policy (EXPERT; default `radau5`, under which the four options above have no effect); the `method` column reads `RadauIIA-s3+periodic` |
+| `--reuse-policy radau5\|periodic`         | FIRKODE setup-reuse policy (EXPERT; default `radau5`, under which the four options above have no effect); the `method` column reads `RadauIIA-s3+periodic` |
 | `--stage-maxl`, `--stage-maxrs`, `--stage-epslin` | FIRKODE stacked FGMRES settings                                   |
 | `--maxcor`, `--nlscoef`                  | nonlinear solver settings                                                  |
-| `--predictor extrapolate|trivial`, `--no-refilter`, `--no-newton-safety`, `--controller NAME`, `--impgus-k K1 K2` | FIRKODE options (EXPERT mode) |
-| `--mode beginner|expert`                 | FIRKODE mode (default BEGINNER). Any EXPERT-only option switches to EXPERT, which also changes the step-size formula; the mode is recorded in the `mode` column |
+| `--predictor extrapolate\|trivial`, `--no-refilter`, `--no-newton-safety`, `--controller NAME`, `--impgus-k K1 K2` | FIRKODE options (EXPERT mode) |
+| `--mode beginner\|expert`                 | FIRKODE mode (default BEGINNER). Any EXPERT-only option switches to EXPERT, which also changes the step-size formula; the mode is recorded in the `mode` column |
 | `--stald`                                | CVODE: BDF stability-limit detection (`CVodeSetStabLimDet`); the `method` column reads `BDF+STALD` |
 | `--arkode-linear`, `--ark-predictor P`   | ARKODE options                                                             |
 | `--maxsteps N`, `--maxnef N`, `--h0 H`, `--tf T`                | limits and final time                                       |
@@ -180,7 +180,7 @@ failure flag (a CSV row is still printed).
 | `nmass_setups`, `nmass_solves`, `nmass_mult` | mass-matrix setups, solves and products |
 | `ngeval`, `nroots`, `root_times` | root-function evaluations, roots found, `t:dir0/dir1;…` |
 | `nrestarts` | re-initializations of a `--restart-every` run (NA otherwise) |
-| `err_mixed`, `err_wrms`, `err_abs_max` | errors at the final time: `max_i |y_i - yref_i| / (atol/rtol + |yref_i|)` (10 to the power of minus the IVP Test Set `mescd`), the WRMS norm with weights `1/(rtol |yref| + atol)`, and the maximum absolute error |
+| `err_mixed`, `err_wrms`, `err_abs_max` | errors at the final time: `max_i \|y_i - yref_i\| / (atol/rtol + \|yref_i\|)` (10 to the power of minus the IVP Test Set `mescd`), the WRMS norm with weights `1/(rtol \|yref\| + atol)`, and the maximum absolute error |
 | `dense_err_mixed`, `dense_err_abs_max` | maxima over the dense-output samples |
 | `hlast`, `ele_wrms`, `ele_max` | last step size and the norms of the local error estimate after one step (`--one-step`) |
 | `q_hist`, `q_mean_step`, `q_mean_time` | `--order-hist` only: steps taken at BDF orders 1 to 5 (`n1;n2;n3;n4;n5`), the step-weighted and the step-size-weighted mean order |
@@ -216,6 +216,17 @@ and recorded with the driver flag `FAST_TIMEOUT`, and the repetitions are
 limited to the budget. Such rows are redone by any later run of the same
 results directory without `--fast`, and a reference that exceeded the budget
 is recomputed then (`--workers` combines with it).
+`--progress` prints the number of finished cells of the selected families
+with the estimated remaining and finishing time, after every cell (with
+`--workers`, the parent reads the worker CSV files every 30 s). A pending
+cell is estimated by the mean wall time of the recorded rows of its
+sub-family, problem and size (earlier runs of the results directory
+included), scaled by the measured overhead of references, sentinels and
+reference locks, and the remaining time is at least the costliest pending
+cell. A sub-family without any recorded row is estimated from the time caps
+of its cells times the recorded ratio of wall time to time cap, a rough
+figure whose share of the estimate is printed until its first cell finishes.
+`--validate` and the B3 logging run are not counted.
 `--list` prints the number of cells of the selected families and exits; the
 Jacobian dumps of the B10 gate land in `results/<run-id>/jac/<problem>/` (not
 committed, like `reference/`, `logs/` and `claims/`).

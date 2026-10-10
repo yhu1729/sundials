@@ -23,7 +23,10 @@
  *   (4, 5 and ord <= 0) and FIRKodeSetNumStages only s = 3; every other value
  *   returns FIRK_ILL_INPUT and leaves the number of stages unchanged;
  * - in BEGINNER mode both return FIRK_ILL_INPUT;
- * - the internal firkSetNumStagesAny accepts 1 <= s <= FIRK_MAX_STAGES.
+ * - the internal firkSetNumStagesAny accepts 1 <= s <= FIRK_MAX_STAGES;
+ * - after the first step attempt the number of stages is locked (another
+ *   value is FIRK_ILL_INPUT, the same value is accepted) until
+ *   FIRKodeReInit.
  *
  * Pass criterion: every return value and number of stages matches.
  * ---------------------------------------------------------------------------*/
@@ -33,7 +36,20 @@
 
 #include "firkode/firkode.h"
 #include "firkode/firkode_impl.h"
+#include "firkode/firkode_ls.h"
+#include "nvector/nvector_serial.h"
 #include "sundials/sundials_context.h"
+#include "sunlinsol/sunlinsol_dense.h"
+#include "sunmatrix/sunmatrix_dense.h"
+
+/* y' = -y, for the lock after the first step */
+static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
+{
+  (void)t;
+  (void)user_data;
+  NV_Ith_S(ydot, 0) = -NV_Ith_S(y, 0);
+  return 0;
+}
 
 static int check(int ok, const char* what, int value)
 {
@@ -117,6 +133,39 @@ int main(void)
                  FIRK_MAX_STAGES + 1);
 
   FIRKodeFree(&mem);
+
+  /* the number of stages is locked by the first step attempt */
+  {
+    sunrealtype tret;
+    N_Vector y         = N_VNew_Serial(1, sunctx);
+    SUNMatrix A        = SUNDenseMatrix(1, 1, sunctx);
+    SUNLinearSolver LS = SUNLinSol_Dense(y, A, sunctx);
+    NV_Ith_S(y, 0)     = SUN_RCONST(1.0);
+    mem                = FIRKodeCreate(sunctx);
+    if (FIRKodeInit(mem, f, SUN_RCONST(0.0), y) ||
+        FIRKodeSStolerances(mem, SUN_RCONST(1.0e-6), SUN_RCONST(1.0e-6)) ||
+        FIRKodeSetLinearSolver(mem, LS, A) || FIRKodeSetMode(mem, FIRK_EXPERT) ||
+        FIRKodeEvolve(mem, SUN_RCONST(1.0), y, &tret, FIRK_ONE_STEP) !=
+          FIRK_SUCCESS)
+    {
+      return 1;
+    }
+    fails += check(firkSetNumStagesAny(mem, 2) == FIRK_ILL_INPUT &&
+                     FIRKodeGetNumStages(mem, &s) == FIRK_SUCCESS && s == 3,
+                   "another number of stages after a step is FIRK_ILL_INPUT", 2);
+    fails += check(firkSetNumStagesAny(mem, 3) == FIRK_SUCCESS &&
+                     FIRKodeSetOrder(mem, 5) == FIRK_SUCCESS,
+                   "the same number of stages after a step is accepted", 3);
+    fails += check(FIRKodeReInit(mem, SUN_RCONST(0.0), y) == FIRK_SUCCESS &&
+                     firkSetNumStagesAny(mem, 2) == FIRK_SUCCESS &&
+                     FIRKodeGetNumStages(mem, &s) == FIRK_SUCCESS && s == 2,
+                   "ReInit unlocks the number of stages", 2);
+    FIRKodeFree(&mem);
+    SUNLinSolFree(LS);
+    SUNMatDestroy(A);
+    N_VDestroy(y);
+  }
+
   SUNContext_Free(&sunctx);
 
   if (fails)

@@ -29,6 +29,9 @@
  *   - FIRK_NLS_RHS_RECVR and the factor etacf for a recoverable RHS failure,
  *     and FIRK_RHSFUNC_FAIL for an unrecoverable one, before any solve;
  *   - FIRK_NLS_DIVERGED and the factor 0.5 at k = 1 for a non-finite update.
+ * The divergence rate setter rejects values of at least 1, for which the
+ * stop test would hold for a diverging iteration, and a non-positive value
+ * restores the default.
  * Every linear solve is one iteration in nni.
  *
  * Part 2 (hazard H19) uses the public API with the three-stage method: a
@@ -208,6 +211,19 @@ static int part1(SUNContext sunctx)
   fails += check(status == FIRK_NLS_DIVERGED && nsolves == 1 &&
                    fm->nls_hfac == SUN_RCONST(0.5),
                  "non-finite update: divergence at k = 1");
+
+  /* the divergence rate must be below 1 */
+  fails += check(FIRKodeSetNonlinDivergenceRate(mem, ONE) == FIRK_ILL_INPUT &&
+                   FIRKodeSetNonlinDivergenceRate(mem, SUN_RCONST(1.5)) ==
+                     FIRK_ILL_INPUT &&
+                   fm->theta_max == THETA_MAX_DEFAULT,
+                 "a divergence rate of at least 1 is FIRK_ILL_INPUT");
+  fails +=
+    check(FIRKodeSetNonlinDivergenceRate(mem, SUN_RCONST(0.5)) == FIRK_SUCCESS &&
+            fm->theta_max == SUN_RCONST(0.5) &&
+            FIRKodeSetNonlinDivergenceRate(mem, SUN_RCONST(0.0)) == FIRK_SUCCESS &&
+            fm->theta_max == THETA_MAX_DEFAULT,
+          "a divergence rate below 1 is set, 0 restores the default");
 
   FIRKodeFree(&mem);
   SUNLinSolFree(LS);

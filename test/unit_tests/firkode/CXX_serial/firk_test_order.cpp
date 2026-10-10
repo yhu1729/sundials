@@ -139,6 +139,15 @@ int run(SUNContext sunctx, const Problem& p, int s, sunrealtype h,
   long int nst, nni;
   FIRKodeGetNumSteps(mem, &nst);
   FIRKodeGetNumNonlinSolvIters(mem, &nni);
+  // an error below the roundoff level 1e4 u is not compared across platforms
+  if (err < SUN_RCONST(1.0e4) * SUN_UNIT_ROUNDOFF)
+  {
+    std::printf("  h = %8.4" ESYM
+                "  steps = %6li  nni/step = %5.2f  error < 1e4 u\n",
+                static_cast<double>(h), nst,
+                static_cast<double>(nni) / static_cast<double>(nst));
+    return 0;
+  }
   std::printf("  h = %8.4" ESYM
               "  steps = %6li  nni/step = %5.2f  error = %.4" ESYM "\n",
               h, nst, static_cast<double>(nni) / static_cast<double>(nst), err);

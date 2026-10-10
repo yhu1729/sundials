@@ -23,6 +23,7 @@
 #include <sundials/sundials_classview.hpp>
 
 #include <firkode/firkode.h>
+#include <firkode/firkode_tables.h>
 
 namespace sundials {
 namespace experimental {
@@ -32,7 +33,13 @@ struct FIRKodeDeleter
   void operator()(void* v) { FIRKodeFree(&v); }
 };
 
-using FIRKodeView = ClassView<void*, FIRKodeDeleter>;
+struct FIRKodeTableDeleter
+{
+  void operator()(FIRKodeTable t) { FIRKodeTable_Free(t); }
+};
+
+using FIRKodeView      = ClassView<void*, FIRKodeDeleter>;
+using FIRKodeTableView = ClassView<FIRKodeTable, FIRKodeTableDeleter>;
 
 } // namespace experimental
 } // namespace sundials

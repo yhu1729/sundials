@@ -18,7 +18,7 @@
  * order conditions (B, C), collocation structure, stiff accuracy (b is the
  * last row of A and d = e_s exactly), L-stability (R(inf) = 0), the derived
  * quantities (A^{-1}, e, P, gamma0), the closed forms for s <= 3 including
- * RADAU5's constants, the table utilities on static and owned tables, and
+ * RADAU5's constants, the table utilities on caller-owned tables, and
  * FIRKodeTable_CheckOrder. Pass criterion: every check holds to
  * 1000 s^2 u (scaled by the size of the quantity where stated).
  * ---------------------------------------------------------------------------*/
@@ -167,7 +167,7 @@ static int test_table(int s)
   sunrealtype tol, err, sum, cpow, scale, gamma0_ref, ratio;
   sunrealtype* x;
   sunrealtype** B;
-  FIRKodeTable T;
+  FIRKodeTable T, C;
 
   /* Reference shifts for even s (no real eigenvalue of A^{-1}) and for s = 3
      from scripts/firkode_radau_tables.py; for odd s the real eigenvalue of
@@ -200,9 +200,11 @@ static int test_table(int s)
     return 1;
   }
 
-  /* the built-in table is static: the same object every call, not owned */
-  fails += check(FIRKodeTable_RadauIIA(s) == T && !T->owned, "static table", s,
-                 ZERO, ZERO);
+  /* every call returns a new, caller-owned copy of the built-in table */
+  C = FIRKodeTable_RadauIIA(s);
+  fails += check(C != NULL && C != T && C->s == s && C->gamma0 == T->gamma0,
+                 "a fresh copy per call", s, ZERO, ZERO);
+  FIRKodeTable_Free(C);
 
   /* metadata */
   fails += check(T->s == s, "stage count", s, ZERO, ZERO);
@@ -467,10 +469,7 @@ static int test_table(int s)
   }
 #endif
 
-  /* freeing a built-in table is a no-op (checked under ASan) */
   FIRKodeTable_Free(T);
-  fails += check(T->s == s, "built-in table survives FIRKodeTable_Free", s,
-                 ZERO, ZERO);
 
   if (fails == 0) { printf("  passed\n"); }
   return fails;
@@ -507,12 +506,11 @@ int main(void)
   }
 
   /* the return value of FIRKodeTable_CheckOrder distinguishes a stored order
-     that is too high (failure) from one that is too low (warning); the
-     built-in tables are read-only, so an owned copy is modified */
-  T = FIRKodeTable_Copy(FIRKodeTable_RadauIIA(2));
-  if (T == NULL || !T->owned)
+     that is too high (failure) from one that is too low (warning) */
+  T = FIRKodeTable_RadauIIA(2);
+  if (T == NULL)
   {
-    printf("  FAIL: FIRKodeTable_Copy did not return an owned table\n");
+    printf("  FAIL: FIRKodeTable_RadauIIA(2) returned NULL\n");
     fails++;
   }
   else
@@ -540,16 +538,17 @@ int main(void)
   /* invalid input */
   {
     int q, p, so;
+    T = FIRKodeTable_RadauIIA(3);
     if (FIRKodeTable_CheckOrder(NULL, &q, &p, &so, NULL) != -1 ||
-        FIRKodeTable_CheckOrder(FIRKodeTable_RadauIIA(3), &q, &p, NULL, NULL) !=
-          -1)
+        FIRKodeTable_CheckOrder(T, &q, &p, NULL, NULL) != -1)
     {
       printf("  FAIL: FIRKodeTable_CheckOrder accepted invalid input\n");
       fails++;
     }
+    FIRKodeTable_Free(T);
   }
 
-  /* FIRKodeTable_Alloc accepts 1 <= s <= FIRK_MAX_STAGES and returns an owned
+  /* FIRKodeTable_Alloc accepts 1 <= s <= FIRK_MAX_STAGES and returns a
      zeroed table */
   T = FIRKodeTable_Alloc(FIRK_MAX_STAGES + 1);
   if (T != NULL)
@@ -560,9 +559,9 @@ int main(void)
     fails++;
   }
   T = FIRKodeTable_Alloc(FIRK_MAX_STAGES);
-  if (T == NULL || !T->owned || T->s != FIRK_MAX_STAGES || T->gamma0 != ZERO)
+  if (T == NULL || T->s != FIRK_MAX_STAGES || T->gamma0 != ZERO)
   {
-    printf("  FAIL: FIRKodeTable_Alloc(%d) did not return an owned table\n",
+    printf("  FAIL: FIRKodeTable_Alloc(%d) did not return a zeroed table\n",
            FIRK_MAX_STAGES);
     fails++;
   }

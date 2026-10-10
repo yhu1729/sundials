@@ -52,8 +52,10 @@ extern "C" {
                coefficient of theta^(k+1) in the Lagrange basis
                polynomial L_i(theta) on the nodes {0, c_1, ..., c_s},
                so that u(t_n + theta h) = y_n + sum_i L_i(theta) z_i
-    owned    : SUNTRUE for a table allocated by FIRKodeTable_Alloc or
-               FIRKodeTable_Copy, which FIRKodeTable_Free releases
+
+  Every table returned by FIRKodeTable_RadauIIA, FIRKodeTable_Alloc
+  or FIRKodeTable_Copy is owned by the caller, who frees it with
+  FIRKodeTable_Free.
   ---------------------------------------------------------------*/
 
 struct FIRKodeTableMem
@@ -70,7 +72,6 @@ struct FIRKodeTableMem
   sunrealtype gamma0;
   sunrealtype P[FIRK_MAX_STAGES * FIRK_MAX_STAGES];
   sunbooleantype stiffly_accurate; /* b equals the last row of A */
-  sunbooleantype owned;
 };
 
 typedef _SUNDIALS_STRUCT_ FIRKodeTableMem* FIRKodeTable;

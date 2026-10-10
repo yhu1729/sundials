@@ -202,11 +202,11 @@ typedef struct FIRKodeMemRec
     Method
     -------*/
 
-  int mode;    /* FIRK_BEGINNER or FIRK_EXPERT                */
-  int s;       /* requested number of stages                 */
-  int s_alloc; /* number of stages the stage memory holds    */
-  const struct FIRKodeTableMem* tbl; /* built-in Radau IIA table for s stages */
-  int predictor;           /* stage predictor method                     */
+  int mode;         /* FIRK_BEGINNER or FIRK_EXPERT                */
+  int s;            /* requested number of stages                 */
+  int s_alloc;      /* number of stages the stage memory holds    */
+  FIRKodeTable tbl; /* the Radau IIA table for s stages, owned          */
+  int predictor;    /* stage predictor method                     */
   sunbooleantype refilter; /* recompute a large error estimate on the first
                               step or after a rejection (RADAU5)          */
 
@@ -558,6 +558,8 @@ int firkNewton(FIRKodeMem firk_mem);
   "Illegal reuse policy (must be FIRK_POLICY_RADAU5 or FIRK_POLICY_PERIODIC)."
 #define MSGFIRK_BAD_THETA_JAC \
   "The Jacobian reuse rate must be less than 1 (<= 0 for the default)."
+#define MSGFIRK_BAD_THETA_MAX \
+  "The divergence rate must be less than 1 (<= 0 for the default)."
 #define MSGFIRK_BAD_CONTROLLER_TYPE \
   "The controller must be of type SUN_ADAPTCONTROLLER_H."
 #define MSGFIRK_BAD_CONTROLLER_NAME                                          \

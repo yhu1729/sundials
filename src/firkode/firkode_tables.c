@@ -73,8 +73,7 @@ static const struct FIRKodeTableMem firk_radau_iia_1 = {
     /* P[0][:] */
     SUN_RCONST(1.0)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_2 = {
   .s = 2,
@@ -121,8 +120,7 @@ static const struct FIRKodeTableMem firk_radau_iia_2 = {
     SUN_RCONST(-4.5),
     SUN_RCONST(1.5)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_3 = {
   .s = 3,
@@ -191,8 +189,7 @@ static const struct FIRKodeTableMem firk_radau_iia_3 = {
     SUN_RCONST(-8.914115380582557157653087040196123626496),
     SUN_RCONST(3.333333333333333333333333333333333333333)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_4 = {
   .s = 4,
@@ -289,8 +286,7 @@ static const struct FIRKodeTableMem firk_radau_iia_4 = {
     SUN_RCONST(-22.61486343993892979971951218655881010651),
     SUN_RCONST(8.75)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_5 = {
   .s = 5,
@@ -421,8 +417,7 @@ static const struct FIRKodeTableMem firk_radau_iia_5 = {
     SUN_RCONST(-64.16737549081558298506576938138853849896),
     SUN_RCONST(25.2)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_6 = {
   .s = 6,
@@ -593,8 +588,7 @@ static const struct FIRKodeTableMem firk_radau_iia_6 = {
     SUN_RCONST(-194.5286784087169440677338311009002956439),
     SUN_RCONST(77.0)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_7 = {
   .s = 7,
@@ -811,8 +805,7 @@ static const struct FIRKodeTableMem firk_radau_iia_7 = {
     SUN_RCONST(-616.4256282165146074092542247007949563442),
     SUN_RCONST(245.1428571428571428571428571428571428571)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_8 = {
   .s = 8,
@@ -1081,8 +1074,7 @@ static const struct FIRKodeTableMem firk_radau_iia_8 = {
     SUN_RCONST(-2016.572358344376247182693691219078068038),
     SUN_RCONST(804.375)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem firk_radau_iia_9 = {
   .s = 9,
@@ -1409,8 +1401,7 @@ static const struct FIRKodeTableMem firk_radau_iia_9 = {
     SUN_RCONST(-6757.836753996088193870649631631817246806),
     SUN_RCONST(2701.111111111111111111111111111111111111)
   },
-  .stiffly_accurate = SUNTRUE,
-  .owned = SUNFALSE};
+  .stiffly_accurate = SUNTRUE};
 
 static const struct FIRKodeTableMem* const firk_radau_iia[FIRK_MAX_STAGES + 1] = {
   NULL,
@@ -1443,31 +1434,32 @@ FIRKodeTable FIRKodeTable_Alloc(int s)
   T = (FIRKodeTable)calloc(1, sizeof(struct FIRKodeTableMem));
   if (T == NULL) { return NULL; }
 
-  T->s     = s;
-  T->owned = SUNTRUE;
+  T->s = s;
 
   return T;
 }
 
 /*---------------------------------------------------------------
-  Routine to access the built-in Radau IIA table with s stages
+  Routine to copy a built-in table into a new, caller-owned table
+  ---------------------------------------------------------------*/
+static FIRKodeTable firkTableFromBuiltin(const struct FIRKodeTableMem* B)
+{
+  FIRKodeTable T;
+
+  T = FIRKodeTable_Alloc(B->s);
+  if (T == NULL) { return NULL; }
+  *T = *B;
+  return T;
+}
+
+/*---------------------------------------------------------------
+  Routine to return a copy of the built-in Radau IIA table with s
+  stages, as ARKodeButcherTable_LoadDIRK does: the caller owns it
   ---------------------------------------------------------------*/
 FIRKodeTable FIRKodeTable_RadauIIA(int s)
 {
-  /* The built-in tables are read-only static objects that the caller does
-     not own (owned is false, so FIRKodeTable_Free ignores them). The public
-     handle type is not const-qualified, as for other SUNDIALS tables, so the
-     qualifier is removed here, once; the pointer representations are
-     identical (C11 6.2.5p28). Writing through the handle is an error. */
-  union
-  {
-    const struct FIRKodeTableMem* in;
-    FIRKodeTable out;
-  } handle;
-
   if (s < 1 || s > FIRK_MAX_STAGES) { return NULL; }
-  handle.in = firk_radau_iia[s];
-  return handle.out;
+  return firkTableFromBuiltin(firk_radau_iia[s]);
 }
 
 /*---------------------------------------------------------------
@@ -1481,8 +1473,7 @@ FIRKodeTable FIRKodeTable_Copy(FIRKodeTable T)
   Tcopy = FIRKodeTable_Alloc(T->s);
   if (Tcopy == NULL) { return NULL; }
 
-  *Tcopy       = *T;
-  Tcopy->owned = SUNTRUE;
+  *Tcopy = *T;
   return Tcopy;
 }
 
@@ -1491,7 +1482,7 @@ FIRKodeTable FIRKodeTable_Copy(FIRKodeTable T)
   ---------------------------------------------------------------*/
 void FIRKodeTable_Free(FIRKodeTable T)
 {
-  if (T == NULL || !T->owned) { return; }
+  if (T == NULL) { return; }
   free(T);
 }
 
@@ -1523,9 +1514,8 @@ void FIRKodeTable_Write(FIRKodeTable T, FILE* outfile)
   s = T->s;
   if (s < 1 || s > FIRK_MAX_STAGES) { return; }
 
-  fprintf(outfile, "  stages = %i,  q = %i,  p = %i,  stiffly accurate = %i,",
+  fprintf(outfile, "  stages = %i,  q = %i,  p = %i,  stiffly accurate = %i\n",
           s, T->q, T->p, (int)T->stiffly_accurate);
-  fprintf(outfile, "  owned = %i\n", (int)T->owned);
   firk_write_array(outfile, "c", T->c, 1, s);
   firk_write_array(outfile, "A", T->A, s, s);
   firk_write_array(outfile, "b", T->b, 1, s);

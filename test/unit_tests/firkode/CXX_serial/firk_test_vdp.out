@@ -1,7 +1,0 @@
-Van der Pol (eps = 1e-6), Radau IIA with s = 3 stages
-  reference (rtol = 1e-10): y1(2) = 1.7061677322e+00, y2(2) = -8.9280970101e-01, steps = 9345
-  test      (rtol = 1e-6):  y1(2) = 1.7061677367e+00, y2(2) = -8.9280989825e-01, steps = 922
-  errors: 4.556e-09 1.972e-07
-  loose     (rtol = 1e-4):  steps = 295, errors: 1.2e-05 4.7e-06
-
-All tests passed

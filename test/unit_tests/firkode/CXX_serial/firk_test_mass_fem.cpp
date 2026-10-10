@@ -235,10 +235,11 @@ int main(int argc, char* argv[])
         ran = false;
         continue;
       }
-      std::printf("  N = %4li: nst = %li, nni = %li, stage linear iters = %li, "
-                  "max error = %.1" ESYM "\n",
+      // the stacked Krylov iteration count varies across platforms and is
+      // not part of the compared output
+      std::printf("  N = %4li: nst = %li, nni = %li, max error = %.1" ESYM "\n",
                   static_cast<long int>(meshes[k]), res[k].nst, res[k].nni,
-                  res[k].nsli, res[k].err);
+                  res[k].err);
 
       // the error of a tolerance-controlled run is of the order of rtol |u|,
       // with |u| <= e^{-1} at tf

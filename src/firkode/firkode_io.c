@@ -141,8 +141,18 @@ int firkSetNumStagesAny(void* firkode_mem, int s)
     return FIRK_ILL_INPUT;
   }
 
-  firk_mem->s   = s;
-  firk_mem->tbl = FIRKodeTable_RadauIIA(s);
+  if (firk_mem->tbl == NULL || firk_mem->tbl->s != s)
+  {
+    FIRKodeTable_Free(firk_mem->tbl);
+    firk_mem->tbl = FIRKodeTable_RadauIIA(s);
+    if (firk_mem->tbl == NULL)
+    {
+      firkProcessError(firk_mem, FIRK_MEM_FAIL, __LINE__, __func__, __FILE__,
+                       MSGFIRK_MEM_FAIL);
+      return FIRK_MEM_FAIL;
+    }
+  }
+  firk_mem->s = s;
   return FIRK_SUCCESS;
 }
 
@@ -189,8 +199,8 @@ int FIRKodeGetCurrentTable(void* firkode_mem, FIRKodeTable* tbl_ptr)
   FIRKodeMem firk_mem;
   FIRK_ACCESS_MEM(firkode_mem, firk_mem);
 
-  /* the built-in table, read-only and not owned by the caller */
-  *tbl_ptr = FIRKodeTable_RadauIIA(firk_mem->tbl->s);
+  /* the integrator's table, not owned by the caller */
+  *tbl_ptr = firk_mem->tbl;
   return FIRK_SUCCESS;
 }
 
@@ -698,6 +708,14 @@ int FIRKodeSetNonlinDivergenceRate(void* firkode_mem, sunrealtype theta_max)
   FIRKodeMem firk_mem;
   FIRK_ACCESS_MEM(firkode_mem, firk_mem);
   if (!firkExpertAllowed(firk_mem, __func__)) { return FIRK_ILL_INPUT; }
+  /* the stop test eta dyno <= eps_nls, eta = theta / (1 - theta), needs
+     theta < 1 for every rate that is not a divergence */
+  if (theta_max >= ONE)
+  {
+    firkProcessError(firk_mem, FIRK_ILL_INPUT, __LINE__, __func__, __FILE__,
+                     MSGFIRK_BAD_THETA_MAX);
+    return FIRK_ILL_INPUT;
+  }
   firk_mem->theta_max = (theta_max <= ZERO) ? THETA_MAX_DEFAULT : theta_max;
   return FIRK_SUCCESS;
 }
@@ -1004,15 +1022,15 @@ int FIRKodePrintAllStats(void* firkode_mem, FILE* outfile, SUNOutputFormat fmt)
                     firkls_massmem->nmsetups);
     sunfprintf_long(outfile, fmt, SUNFALSE, "Mass solves",
                     firkls_massmem->nmsolves);
-    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass mult evals",
+    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass-times evals",
                     firkls_massmem->nmmults);
     sunfprintf_long(outfile, fmt, SUNFALSE, "Mass LS iters",
                     firkls_massmem->nmli);
     sunfprintf_long(outfile, fmt, SUNFALSE, "Mass LS fails",
                     firkls_massmem->nmcfl);
-    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass prec setups",
+    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass Prec setup evals",
                     firkls_massmem->nmpe);
-    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass prec solves",
+    sunfprintf_long(outfile, fmt, SUNFALSE, "Mass Prec solves",
                     firkls_massmem->nmps);
   }
 
@@ -1152,17 +1170,12 @@ char* FIRKodeGetReturnFlagName(long int flag)
   case FIRK_BAD_DKY: str = "FIRK_BAD_DKY"; break;
   case FIRK_TOO_CLOSE: str = "FIRK_TOO_CLOSE"; break;
   case FIRK_VECTOROP_ERR: str = "FIRK_VECTOROP_ERR"; break;
-  case FIRK_CONTEXT_ERR: str = "FIRK_CONTEXT_ERR"; break;
   case FIRK_MASSINIT_FAIL: str = "FIRK_MASSINIT_FAIL"; break;
   case FIRK_MASSSETUP_FAIL: str = "FIRK_MASSSETUP_FAIL"; break;
   case FIRK_MASSSOLVE_FAIL: str = "FIRK_MASSSOLVE_FAIL"; break;
-  case FIRK_MASSFREE_FAIL: str = "FIRK_MASSFREE_FAIL"; break;
   case FIRK_MASSMULT_FAIL: str = "FIRK_MASSMULT_FAIL"; break;
-  case FIRK_INVALID_TABLE: str = "FIRK_INVALID_TABLE"; break;
   case FIRK_TABLE_FAIL: str = "FIRK_TABLE_FAIL"; break;
   case FIRK_CONTROLLER_ERR: str = "FIRK_CONTROLLER_ERR"; break;
-  case FIRK_STEPPER_ERR: str = "FIRK_STEPPER_ERR"; break;
-  case FIRK_ORDER_CHANGE_FAIL: str = "FIRK_ORDER_CHANGE_FAIL"; break;
   case FIRK_UNRECOGNIZED_ERR: str = "FIRK_UNRECOGNIZED_ERR"; break;
   default: str = "NONE";
   }

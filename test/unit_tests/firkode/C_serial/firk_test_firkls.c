@@ -68,7 +68,9 @@
  * - input validation: a rejected SetPreconditioner changes nothing; a user
  *   linsys set between Evolve calls drops the saved Jacobian (stale for the
  *   stacked operator), and the default linsys set back saves one again,
- *   evaluated before its first use;
+ *   evaluated before its first use; one SUNLinearSolver object for both the
+ *   system and the mass matrix is FIRKLS_ILL_INPUT in either attach order,
+ *   leaving the solver already attached in place;
  * - purpose-aware mass solves (M = I, a mock PCG): a reduced residual is
  *   accepted for a derivative of y (the initial step) and is a recoverable
  *   failure of the enclosing solve in the units conversion; the other codes
@@ -125,6 +127,8 @@ static int psolve_fail_value        = 0;
    solver, s = 3) */
 static void* gamma_mem          = NULL; /* set to check gamma         */
 static long int nest_gamma_bad  = 0;    /* gamma != psetup's gamma    */
+static long int nstk_gamma_bad  = 0;    /* stacked: gamma != psetup's */
+static long int nstk_gamma_diff = 0;    /* stacked calls, gamma != gammap */
 static long int nest_gamma_diff = 0;    /* calls with gamma != gammap */
 
 static void psolve_reset(void)
@@ -137,6 +141,8 @@ static void psolve_reset(void)
   psolve_fail_at   = 0;
   gamma_mem        = NULL;
   nest_gamma_bad   = 0;
+  nstk_gamma_bad   = 0;
+  nstk_gamma_diff  = 0;
   nest_gamma_diff  = 0;
 }
 
@@ -277,11 +283,20 @@ static int psolve(sunrealtype t, N_Vector y, N_Vector fy, N_Vector r, N_Vector z
   (void)fy;
   (void)user_data;
 
-  /* a stacked call: its side, and its tolerance eps_L ||r||_WRMS nrmfac */
+  /* a stacked call: its side, its tolerance eps_L ||r||_WRMS nrmfac, and
+     the gamma of the last psetup */
   if (psolve_mock == NULL || !psolve_mock->in_solve)
   {
     if (npsolve_stacked < 2 * NREC) { psolve_lr[npsolve_stacked] = lr; }
     npsolve_stacked++;
+    if (gamma_mem != NULL)
+    {
+      if (gamma != psetup_gamma) { nstk_gamma_bad++; }
+      if (((FIRKodeMem)gamma_mem)->gamma != ((FIRKodeMem)gamma_mem)->gammap)
+      {
+        nstk_gamma_diff++;
+      }
+    }
     if (psolve_mem != NULL)
     {
       FIRKodeGetErrWeights(psolve_mem, psolve_w);
@@ -1051,7 +1066,8 @@ static int check_stacked_operator(SUNContext sunctx)
   fails += check(nsli == 0, what, 3);
   teardown(&R);
 
-  /* a matrix-free estimate with the gamma of the last setup */
+  /* a matrix-free estimate, and the stacked block preconditioner, with the
+     gamma of the last setup */
   if (setup(sunctx, &R, 3, SUN_RCONST(1.0e-6))) { return fails + 1; }
   if (FIRKodeSetMode(R.mem, FIRK_EXPERT) ||
       FIRKodeSetReusePolicy(R.mem, FIRK_POLICY_PERIODIC))
@@ -1067,6 +1083,11 @@ static int check_stacked_operator(SUNContext sunctx)
            "%ld calls while gamma != gammap",
            nest_gamma_bad, nest_gamma_diff);
   fails += check(nest_gamma_bad == 0 && nest_gamma_diff > 0, what, 3);
+  snprintf(what, sizeof(what),
+           "the stacked preconditioner uses gammap: %ld psolve calls with "
+           "another gamma, %ld calls while gamma != gammap",
+           nstk_gamma_bad, nstk_gamma_diff);
+  fails += check(nstk_gamma_bad == 0 && nstk_gamma_diff > 0, what, 3);
   teardown(&R);
   return fails;
 }
@@ -1333,6 +1354,60 @@ static int check_input_validation(SUNContext sunctx)
   return fails;
 }
 
+/* one SUNLinearSolver object for the system and the mass matrix */
+static int check_shared_solver(SUNContext sunctx)
+{
+  int fails = 0;
+  SUNMatrix M;
+  SUNLinearSolver MLS;
+  FIRKodeMem mem;
+  struct run R;
+
+  R.y = N_VNew_Serial(NEQ, sunctx);
+  N_VConst(ONE, R.y);
+  R.A   = SUNDenseMatrix(NEQ, NEQ, sunctx);
+  R.LS  = SUNLinSol_Dense(R.y, R.A, sunctx);
+  M     = SUNDenseMatrix(NEQ, NEQ, sunctx);
+  MLS   = SUNLinSol_Dense(R.y, M, sunctx);
+  R.mem = FIRKodeCreate(sunctx);
+  if (FIRKodeInit(R.mem, f, ZERO, R.y) ||
+      FIRKodeSStolerances(R.mem, SUN_RCONST(1.0e-6), SUN_RCONST(1.0e-6)) ||
+      FIRKodeSetLinearSolver(R.mem, R.LS, R.A))
+  {
+    return 1;
+  }
+  mem = (FIRKodeMem)R.mem;
+
+  /* the system solver offered as the mass solver */
+  fails += check(FIRKodeSetMassLinearSolver(R.mem, R.LS, M, SUNFALSE) ==
+                   FIRKLS_ILL_INPUT,
+                 "the system solver is rejected as the mass solver", 3);
+  fails += check(mem->mass_mem == NULL && !mem->mass_set,
+                 "a rejected mass solver attaches nothing", 3);
+
+  /* a distinct mass solver, then offered as the system solver */
+  fails +=
+    check(FIRKodeSetMassLinearSolver(R.mem, MLS, M, SUNFALSE) == FIRKLS_SUCCESS,
+          "a distinct mass solver is accepted", 3);
+  fails += check(FIRKodeSetMassEpsLin(R.mem, -ONE) == FIRKLS_ILL_INPUT &&
+                   FIRKodeSetMassEpsLin(R.mem, SUN_RCONST(0.1)) == FIRKLS_SUCCESS &&
+                   ((FIRKLsMassMem)mem->mass_mem)->eplifac == SUN_RCONST(0.1) &&
+                   FIRKodeSetMassEpsLin(R.mem, ZERO) == FIRKLS_SUCCESS &&
+                   ((FIRKLsMassMem)mem->mass_mem)->eplifac == FIRKLS_EPLIN,
+                 "SetMassEpsLin rejects a negative factor, 0 restores the "
+                 "default",
+                 3);
+  fails += check(FIRKodeSetLinearSolver(R.mem, MLS, R.A) == FIRKLS_ILL_INPUT,
+                 "the mass solver is rejected as the system solver", 3);
+  fails += check(mem->lmem != NULL && ((FIRKLsMem)mem->lmem)->LS == R.LS,
+                 "a rejected system solver leaves the attached one", 3);
+
+  teardown(&R);
+  SUNLinSolFree(MLS);
+  SUNMatDestroy(M);
+  return fails;
+}
+
 /* M = I, matrix-free */
 static int mtimes_identity(N_Vector v, N_Vector Mv, sunrealtype t,
                            void* mtimes_data)
@@ -1481,6 +1556,7 @@ int main(void)
   fails += check_dq_restore(sunctx, SUNTRUE);
   fails += check_stage_setters(sunctx);
   fails += check_input_validation(sunctx);
+  fails += check_shared_solver(sunctx);
   fails += check_mass_flags(sunctx);
 
   SUNContext_Free(&sunctx);

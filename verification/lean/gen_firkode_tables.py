@@ -224,7 +224,7 @@ def fingerprint_text(text):
 
 LITERAL = re.compile(r"SUN_RCONST\(([-+0-9.eE]+)\)")
 TABLE = re.compile(
-    r"static const struct FIRKodeTableMem firk_radau_iia_(\d+) = \{(.*?)\.owned = SUNFALSE\};",
+    r"static const struct FIRKodeTableMem firk_radau_iia_(\d+) = \{(.*?)\.stiffly_accurate = SUNTRUE\};",
     re.DOTALL,
 )
 

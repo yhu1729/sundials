@@ -25,7 +25,10 @@
  *   solution the previous call returned;
  * - a second FIRKodeInit discards the tolerances (its vectors, among them
  *   the vector absolute tolerances, are freed): FIRKodeEvolve then returns
- *   FIRK_ILL_INPUT until they are set again, and succeeds afterwards.
+ *   FIRK_ILL_INPUT until they are set again, and succeeds afterwards;
+ * - the tolerances may be changed between FIRKodeEvolve calls: each of the
+ *   three tolerance functions takes effect at the next call, and a user
+ *   weight function set then receives the user data pointer.
  *
  * Pass criterion: the return values, the call counts and the arguments match.
  * ---------------------------------------------------------------------------*/
@@ -69,11 +72,12 @@ static int jac(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
 /* user weights, counting their calls and recording their argument */
 static long int nefun = 0;
 static sunrealtype efun_y[2];
+static void* efun_data = NULL;
 
 static int efun(N_Vector y, N_Vector ewt, void* user_data)
 {
   int i;
-  (void)user_data;
+  efun_data = user_data;
   nefun++;
   for (i = 0; i < 2; i++)
   {
@@ -199,6 +203,41 @@ int main(void)
                  "tolerances set again after the second Init");
   flag = FIRKodeEvolve(R.mem, ONE, R.y, &tret, FIRK_ONE_STEP);
   fails += check(flag == FIRK_SUCCESS, "Evolve succeeds with new tolerances");
+  teardown(&R);
+
+  /* tolerances changed between Evolve calls: scalar, vector, then a user
+     weight function, which receives the user data pointer */
+  if (setup(sunctx, &R, ONE) || FIRKodeSStolerances(R.mem, RTOL, RTOL) ||
+      FIRKodeSetUserData(R.mem, &R))
+  {
+    return 1;
+  }
+  flag = FIRKodeEvolve(R.mem, SUN_RCONST(0.5), R.y, &tret, FIRK_ONE_STEP);
+  fails += check(flag == FIRK_SUCCESS, "the first step succeeds");
+  fails += check(FIRKodeSStolerances(R.mem, RTOL, RTOL * RTOL) == FIRK_SUCCESS,
+                 "scalar tolerances between Evolve calls");
+  flag = FIRKodeEvolve(R.mem, SUN_RCONST(0.5), R.y, &tret, FIRK_ONE_STEP);
+  fails += check(flag == FIRK_SUCCESS, "a step after new scalar tolerances");
+  {
+    N_Vector abstol = N_VClone(R.y);
+    N_VConst(RTOL * RTOL, abstol);
+    flag = FIRKodeSVtolerances(R.mem, RTOL, abstol);
+    N_VDestroy(abstol);
+  }
+  fails += check(flag == FIRK_SUCCESS,
+                 "vector tolerances between Evolve calls");
+  flag = FIRKodeEvolve(R.mem, SUN_RCONST(0.5), R.y, &tret, FIRK_ONE_STEP);
+  fails += check(flag == FIRK_SUCCESS, "a step after new vector tolerances");
+  fails += check(FIRKodeWFtolerances(R.mem, efun) == FIRK_SUCCESS,
+                 "a weight function between Evolve calls");
+  nefun     = 0;
+  efun_data = NULL;
+  flag      = FIRKodeEvolve(R.mem, SUN_RCONST(0.5), R.y, &tret, FIRK_ONE_STEP);
+  snprintf(what, sizeof(what),
+           "a step after a new weight function: %ld evaluation(s), user data "
+           "%s",
+           nefun, (efun_data == &R) ? "passed" : "missing");
+  fails += check(flag == FIRK_SUCCESS && nefun == 1 && efun_data == &R, what);
   teardown(&R);
 
   SUNContext_Free(&sunctx);

@@ -108,6 +108,17 @@ int FIRKodeSetLinearSolver(void* firkode_mem, SUNLinearSolver LS, SUNMatrix A)
     return FIRKLS_ILL_INPUT;
   }
 
+  /* the mass matrix solver must be a distinct object: both interfaces set
+     the solver's ATimes routine and, for a direct solver, factor into the
+     same solver content */
+  if ((firk_mem->mass_mem != NULL) &&
+      (((FIRKLsMassMem)firk_mem->mass_mem)->LS == LS))
+  {
+    firkProcessError(firk_mem, FIRKLS_ILL_INPUT, __LINE__, __func__, __FILE__,
+                     MSG_LS_SHARED_LS);
+    return FIRKLS_ILL_INPUT;
+  }
+
   /* test if solver is compatible with the LS interface */
   if ((LS->ops->gettype == NULL) || (LS->ops->solve == NULL))
   {
@@ -185,6 +196,7 @@ int FIRKodeSetLinearSolver(void* firkode_mem, SUNLinearSolver LS, SUNMatrix A)
   {
     firkProcessError(firk_mem, FIRKLS_MEM_FAIL, __LINE__, __func__, __FILE__,
                      MSG_LS_MEM_FAIL);
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_MEM_FAIL;
   }
   memset(firkls_mem, 0, sizeof(struct FIRKLsMemRec));
@@ -484,6 +496,7 @@ int FIRKodeSetPreconditioner(void* firkode_mem, FIRKLsPrecSetupFn pset,
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSolSetPreconditioner");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1279,17 +1292,22 @@ static int firkLsUserPretype(SUNLinearSolver LS)
 static int firkLsUserPSolveBlock(FIRKodeMem firk_mem, FIRKLsMem firkls_mem,
                                  N_Vector r, N_Vector z, int pretype)
 {
-  sunrealtype delta;
+  sunrealtype delta, gamma;
   int retval, failed = 0;
 
   delta = firkls_mem->eplifac * N_VWrmsNorm(r, firk_mem->ewt) *
           firkls_mem->nrmfac;
 
+  /* the gamma of the user's preconditioner data: that of the last setup, as
+     for a preconditioner block of a matrix-based solver (firkLsSolveBlock,
+     design Table 8.6); without any setup, gamma */
+  gamma = (firk_mem->gammap == ZERO) ? firk_mem->gamma : firk_mem->gammap;
+
   if (pretype == SUN_PREC_BOTH)
   {
-    retval = firkls_mem->psolve(firk_mem->tn, firkls_mem->ycur, firkls_mem->fcur,
-                                r, firkls_mem->ytemp, firk_mem->gamma, delta,
-                                SUN_PREC_LEFT, firkls_mem->P_data);
+    retval = firkls_mem->psolve(firk_mem->tn, firkls_mem->ycur,
+                                firkls_mem->fcur, r, firkls_mem->ytemp, gamma,
+                                delta, SUN_PREC_LEFT, firkls_mem->P_data);
     firkls_mem->nps++;
     if (retval < 0) { return -1; }
     failed  = (retval > 0);
@@ -1298,8 +1316,7 @@ static int firkLsUserPSolveBlock(FIRKodeMem firk_mem, FIRKLsMem firkls_mem,
   }
 
   retval = firkls_mem->psolve(firk_mem->tn, firkls_mem->ycur, firkls_mem->fcur,
-                              r, z, firk_mem->gamma, delta, pretype,
-                              firkls_mem->P_data);
+                              r, z, gamma, delta, pretype, firkls_mem->P_data);
   firkls_mem->nps++;
   if (retval < 0) { return -1; }
   return (failed || retval > 0) ? 1 : 0;
@@ -1647,7 +1664,9 @@ static int firkLsLinSys(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix A,
   firkLsSetupStacked / firkLsFreeStacked
 
   Create/free the internal flexible GMRES solver and work vectors
-  for the stacked stage system (only used for s >= 2).
+  for the stacked stage system (only used for s >= 2). A failure
+  frees what the setup allocated, so that a solver is attached
+  only together with its work vectors.
   -----------------------------------------------------------------*/
 static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
 {
@@ -1678,6 +1697,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_MEM_FAIL, __LINE__, __func__, __FILE__,
                      MSG_LS_MEM_FAIL);
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_MEM_FAIL;
   }
 
@@ -1686,6 +1706,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSol_SPFGMRSetMaxRestarts");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1694,6 +1715,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSol_SPFGMRSetGSType");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1702,6 +1724,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSolSetATimes");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1711,6 +1734,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSolSetPreconditioner");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1719,6 +1743,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_SUNLS_FAIL, __LINE__, __func__, __FILE__,
                      "Error in calling SUNLinSolInitialize");
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_SUNLS_FAIL;
   }
 
@@ -1727,6 +1752,7 @@ static int firkLsSetupStacked(FIRKodeMem firk_mem, FIRKLsMem firkls_mem)
   {
     firkProcessError(firk_mem, FIRKLS_MEM_FAIL, __LINE__, __func__, __FILE__,
                      MSG_LS_MEM_FAIL);
+    firkLsFreeStacked(firkls_mem);
     return FIRKLS_MEM_FAIL;
   }
 
@@ -2813,6 +2839,14 @@ int FIRKodeSetMassLinearSolver(void* firkode_mem, SUNLinearSolver LS,
     return FIRKLS_ILL_INPUT;
   }
 
+  /* the system solver must be a distinct object (see FIRKodeSetLinearSolver) */
+  if ((firk_mem->lmem != NULL) && (((FIRKLsMem)firk_mem->lmem)->LS == LS))
+  {
+    firkProcessError(firk_mem, FIRKLS_ILL_INPUT, __LINE__, __func__, __FILE__,
+                     MSG_LS_SHARED_LS);
+    return FIRKLS_ILL_INPUT;
+  }
+
   /* test if solver is compatible with the LS interface */
   if ((LS->ops->gettype == NULL) || (LS->ops->solve == NULL))
   {
@@ -3091,7 +3125,14 @@ int FIRKodeSetMassEpsLin(void* firkode_mem, sunrealtype eplifac)
   retval = firkLs_AccessMassMem(firkode_mem, __func__, &firk_mem, &firkls_mem);
   if (retval != FIRKLS_SUCCESS) { return retval; }
 
-  firkls_mem->eplifac = (eplifac <= ZERO) ? FIRKLS_EPLIN : eplifac;
+  if (eplifac < ZERO)
+  {
+    firkProcessError(firk_mem, FIRKLS_ILL_INPUT, __LINE__, __func__, __FILE__,
+                     "eplifac < 0 illegal.");
+    return FIRKLS_ILL_INPUT;
+  }
+
+  firkls_mem->eplifac = (eplifac == ZERO) ? FIRKLS_EPLIN : eplifac;
 
   return FIRKLS_SUCCESS;
 }

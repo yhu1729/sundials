@@ -145,6 +145,7 @@ void* FIRKodeCreate(SUNContext sunctx)
   retval = firkSetExpertDefaults(firk_mem);
   if (retval != FIRK_SUCCESS)
   {
+    FIRKodeTable_Free(firk_mem->tbl);
     free(firk_mem->hadapt_mem);
     free(firk_mem);
     return NULL;
@@ -188,8 +189,18 @@ void* FIRKodeCreate(SUNContext sunctx)
   ---------------------------------------------------------------*/
 int firkSetExpertDefaults(FIRKodeMem firk_mem)
 {
-  firk_mem->s         = FIRK_DEFAULT_STAGES;
-  firk_mem->tbl       = FIRKodeTable_RadauIIA(FIRK_DEFAULT_STAGES);
+  firk_mem->s = FIRK_DEFAULT_STAGES;
+  if (firk_mem->tbl == NULL || firk_mem->tbl->s != FIRK_DEFAULT_STAGES)
+  {
+    FIRKodeTable_Free(firk_mem->tbl);
+    firk_mem->tbl = FIRKodeTable_RadauIIA(FIRK_DEFAULT_STAGES);
+    if (firk_mem->tbl == NULL)
+    {
+      firkProcessError(firk_mem, FIRK_MEM_FAIL, __LINE__, __func__, __FILE__,
+                       MSGFIRK_MEM_FAIL);
+      return FIRK_MEM_FAIL;
+    }
+  }
   firk_mem->predictor = FIRK_PREDICT_EXTRAPOLATE;
   firk_mem->refilter  = SUNTRUE;
 
@@ -314,10 +325,11 @@ int FIRKodeInit(void* firkode_mem, FIRKRhsFn f, sunrealtype t0, N_Vector y0)
   if (firk_mem->MallocDone)
   {
     firkFreeVectors(firk_mem);
-    firk_mem->itol      = FIRK_NN;
-    firk_mem->user_efun = SUNFALSE;
-    firk_mem->efun      = NULL;
-    firk_mem->e_data    = NULL;
+    firk_mem->MallocDone = SUNFALSE;
+    firk_mem->itol       = FIRK_NN;
+    firk_mem->user_efun  = SUNFALSE;
+    firk_mem->efun       = NULL;
+    firk_mem->e_data     = NULL;
     firkSetNlsCoef(firk_mem);
   }
   if (!firkAllocVectors(firk_mem, y0))
@@ -333,6 +345,7 @@ int FIRKodeInit(void* firkode_mem, FIRKRhsFn f, sunrealtype t0, N_Vector y0)
   firkFreeStageVectors(firk_mem);
   if (!firkAllocStageVectors(firk_mem))
   {
+    firkFreeVectors(firk_mem);
     firkProcessError(firk_mem, FIRK_MEM_FAIL, __LINE__, __func__, __FILE__,
                      MSGFIRK_MEM_FAIL);
     SUNDIALS_MARK_FUNCTION_END(FIRK_PROFILER);
@@ -480,7 +493,7 @@ int FIRKodeSStolerances(void* firkode_mem, sunrealtype reltol, sunrealtype absto
 
   firk_mem->user_efun = SUNFALSE;
   firk_mem->efun      = firkEwtSet;
-  firk_mem->e_data    = NULL; /* set to firk_mem in the initial setup */
+  firk_mem->e_data    = firk_mem;
 
   firkSetNlsCoef(firk_mem);
 
@@ -554,7 +567,7 @@ int FIRKodeSVtolerances(void* firkode_mem, sunrealtype reltol, N_Vector abstol)
 
   firk_mem->user_efun = SUNFALSE;
   firk_mem->efun      = firkEwtSet;
-  firk_mem->e_data    = NULL;
+  firk_mem->e_data    = firk_mem;
 
   firkSetNlsCoef(firk_mem);
 
@@ -590,7 +603,7 @@ int FIRKodeWFtolerances(void* firkode_mem, FIRKEwtFn efun)
   firk_mem->itol      = FIRK_WF;
   firk_mem->user_efun = SUNTRUE;
   firk_mem->efun      = efun;
-  firk_mem->e_data    = NULL; /* set to user_data in the initial setup */
+  firk_mem->e_data    = firk_mem->user_data;
 
   firkSetNlsCoef(firk_mem);
 
@@ -1232,6 +1245,9 @@ void FIRKodeFree(void** firkode_mem)
 
   (void)firkRootFree(firk_mem);
 
+  FIRKodeTable_Free(firk_mem->tbl);
+  firk_mem->tbl = NULL;
+
   if (firk_mem->hadapt_mem != NULL)
   {
     if (firk_mem->hadapt_mem->owncontroller &&
@@ -1542,7 +1558,11 @@ static int firkInitialSetup(FIRKodeMem firk_mem, sunrealtype tout)
   }
 
   /* the built-in table for the requested number of stages */
-  firk_mem->tbl = FIRKodeTable_RadauIIA(firk_mem->s);
+  if (firk_mem->tbl == NULL || firk_mem->tbl->s != firk_mem->s)
+  {
+    FIRKodeTable_Free(firk_mem->tbl);
+    firk_mem->tbl = FIRKodeTable_RadauIIA(firk_mem->s);
+  }
   if (firk_mem->tbl == NULL)
   {
     firkProcessError(firk_mem, FIRK_TABLE_FAIL, __LINE__, __func__, __FILE__,

@@ -83,7 +83,8 @@ typedef struct FIRKLsMemRec
   sunrealtype gamma_op; /* gamma of the block operator and of the
                            user's psolve in a block solve: gamma for
                            the Newton system, gammap for the
-                           estimate (design Table 8.6)             */
+                           estimate and a preconditioner block
+                           (design Table 8.6)                      */
 
   /* Block linear solver, matrix and vector objects/pointers */
   SUNLinearSolver LS;       /* user's N x N linear solver                */
@@ -300,6 +301,8 @@ int firkLs_AccessMassMem(void* firkode_mem, const char* fname,
   "The preconditioner solve routine failed in an unrecoverable manner."
 #define MSG_LS_MATRIX_TYPES \
   "The Jacobian and mass matrix objects must have the same SUNMatrix type."
+#define MSG_LS_SHARED_LS \
+  "The system and mass matrix linear solvers must be distinct objects."
 
 #ifdef __cplusplus
 }

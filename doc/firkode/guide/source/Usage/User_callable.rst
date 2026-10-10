@@ -43,30 +43,31 @@ FIRKODE memory block created and allocated by the first two calls.
 
    The function :c:func:`FIRKodeCreate` instantiates a FIRKODE solver object.
 
-   **Arguments:**
-      - ``sunctx`` -- the :c:type:`SUNContext` object (see :numref:`SUNDIALS.SUNContext`)
+   :param sunctx: the :c:type:`SUNContext` object (see :numref:`SUNDIALS.SUNContext`)
 
-   **Return value:**
-      - If successful, :c:func:`FIRKodeCreate` returns a pointer to the newly
-        created FIRKODE memory block (of type ``void *``). Otherwise, it
-        returns ``NULL``.
+   :returns: If successful, :c:func:`FIRKodeCreate` returns a pointer to the newly
+      created FIRKODE memory block (of type ``void *``). Otherwise, it
+      returns ``NULL``.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeInit(void* firkode_mem, FIRKRhsFn f, sunrealtype t0, N_Vector y0)
 
    The function :c:func:`FIRKodeInit` provides required problem and solution
    specifications, allocates internal memory, and initializes FIRKODE.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block returned by :c:func:`FIRKodeCreate`.
-      - ``f`` -- is the C function which computes the right-hand side function :math:`f` in the ODE :math:`M \dot{y} = f(t,y)`. This function has the form ``f(t, y, ydot, user_data)`` (for full details see :c:type:`FIRKRhsFn`).
-      - ``t0`` -- is the initial value of :math:`t`.
-      - ``y0`` -- is the initial value of :math:`y`.
+   :param firkode_mem: pointer to the FIRKODE memory block returned by :c:func:`FIRKodeCreate`.
+   :param f: is the C function which computes the right-hand side function :math:`f` in the ODE :math:`M \dot{y} = f(t,y)`. This function has the form ``f(t, y, ydot, user_data)`` (for full details see :c:type:`FIRKRhsFn`).
+   :param t0: is the initial value of :math:`t`.
+   :param y0: is the initial value of :math:`y`.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized through a previous call to :c:func:`FIRKodeCreate`.
-      - ``FIRK_MEM_FAIL`` -- A memory allocation request has failed.
-      - ``FIRK_ILL_INPUT`` -- An input argument to :c:func:`FIRKodeInit` has an illegal value, or the vector ``y0`` does not implement a required operation (see :numref:`NVectors.FIRKODE`).
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized through a previous call to :c:func:`FIRKodeCreate`.
+   :retval FIRK_MEM_FAIL: A memory allocation request has failed.
+   :retval FIRK_ILL_INPUT: An input argument to :c:func:`FIRKodeInit` has an illegal value, or the vector ``y0`` does not implement a required operation (see :numref:`NVectors.FIRKODE`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       If an error occurred, :c:func:`FIRKodeInit` also sends an error message
@@ -85,11 +86,9 @@ FIRKODE memory block created and allocated by the first two calls.
    (but not the ``SUNLinearSolver`` and ``SUNMatrix`` objects supplied by the
    user).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
+   :param firkode_mem: pointer to the FIRKODE memory block.
 
-   **Return value:**
-      - The function :c:func:`FIRKodeFree` has no return value.
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.tolerances:
@@ -107,33 +106,34 @@ WRMS vector norms). Note that this call must be made after the call to
    The function :c:func:`FIRKodeSStolerances` specifies scalar relative and
    absolute tolerances.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``reltol`` -- is the scalar relative error tolerance.
-      - ``abstol`` -- is the scalar absolute error tolerance.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param reltol: is the scalar relative error tolerance.
+   :param abstol: is the scalar absolute error tolerance.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_NO_MALLOC`` -- The allocation function :c:func:`FIRKodeInit` has not been called.
-      - ``FIRK_ILL_INPUT`` -- One of the input tolerances was negative.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_NO_MALLOC: The allocation function :c:func:`FIRKodeInit` has not been called.
+   :retval FIRK_ILL_INPUT: One of the input tolerances was negative.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeSVtolerances(void* firkode_mem, sunrealtype reltol, N_Vector abstol)
 
    The function :c:func:`FIRKodeSVtolerances` specifies a scalar relative
    tolerance and vector absolute tolerances.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``reltol`` -- is the scalar relative error tolerance.
-      - ``abstol`` -- is the vector of absolute error tolerances.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param reltol: is the scalar relative error tolerance.
+   :param abstol: is the vector of absolute error tolerances.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_NO_MALLOC`` -- The allocation function :c:func:`FIRKodeInit` has not been called.
-      - ``FIRK_ILL_INPUT`` -- The relative error tolerance was negative or the absolute tolerance had a negative component.
-      - ``FIRK_MEM_FAIL`` -- The copy of the absolute tolerance vector could not be allocated.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_NO_MALLOC: The allocation function :c:func:`FIRKodeInit` has not been called.
+   :retval FIRK_ILL_INPUT: The relative error tolerance was negative or the absolute tolerance had a negative component.
+   :retval FIRK_MEM_FAIL: The copy of the absolute tolerance vector could not be allocated.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       This choice of tolerances is important when the absolute error
@@ -147,15 +147,16 @@ WRMS vector norms). Note that this call must be made after the call to
    for use in the weighted RMS norm, which are normally defined by
    :eq:`FIRKODE_errwt`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``efun`` -- is the C function which defines the ``ewt`` vector (see :c:type:`FIRKEwtFn`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param efun: is the C function which defines the ``ewt`` vector (see :c:type:`FIRKEwtFn`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_NO_MALLOC`` -- The allocation function :c:func:`FIRKodeInit` has not been called.
-      - ``FIRK_ILL_INPUT`` -- The function ``efun`` is ``NULL``.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_NO_MALLOC: The allocation function :c:func:`FIRKodeInit` has not been called.
+   :retval FIRK_ILL_INPUT: The function ``efun`` is ``NULL``.
+
+   .. versionadded:: x.y.z
+
 
 **General advice on the choice of tolerances.** For many users, the
 appropriate choices for tolerance values in ``reltol`` and ``abstol`` are a
@@ -200,20 +201,22 @@ the tables below marks each optional input B or E.
 
    Selects the mode of FIRKODE.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mode`` -- ``FIRK_BEGINNER`` (the default) or ``FIRK_EXPERT``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mode: ``FIRK_BEGINNER`` (the default) or ``FIRK_EXPERT``.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is not one of the two values, or a step
-        has been attempted since :c:func:`FIRKodeCreate` or
-        :c:func:`FIRKodeReInit`.
-      - ``FIRK_LINIT_FAIL`` -- The options of the stacked stage solver could
-        not be restored on the return to BEGINNER mode.
-      - ``FIRK_MEM_FAIL`` or ``FIRK_CONTROLLER_ERR`` -- The default step size
-        controller could not be created on the return to BEGINNER mode.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is not one of the two values, or a step
+      has been attempted since :c:func:`FIRKodeCreate` or
+      :c:func:`FIRKodeReInit`.
+   :retval FIRK_LINIT_FAIL: The options of the stacked stage solver could
+      not be restored on the return to BEGINNER mode.
+   :retval FIRK_MEM_FAIL: The default step size controller could not be
+      created on the return to BEGINNER mode.
+   :retval FIRK_CONTROLLER_ERR: The default step size controller could not
+      be created on the return to BEGINNER mode.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The mode can be set at any time before the first step, and again after
@@ -226,13 +229,13 @@ the tables below marks each optional input B or E.
 
    Returns the mode of FIRKODE.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mode_ptr`` -- the mode, ``FIRK_BEGINNER`` or ``FIRK_EXPERT``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mode_ptr: the mode, ``FIRK_BEGINNER`` or ``FIRK_EXPERT``.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.method:
@@ -254,15 +257,15 @@ called before the first call to :c:func:`FIRKodeEvolve` or directly after
    the function exists so that its signature is stable when later versions
    add the other stage counts.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``s`` -- the number of stages, which must be 3.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param s: the number of stages, which must be 3.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- ``s`` is not 3.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: ``s`` is not 3.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default is :math:`s = 3`. The tables of the Radau IIA methods with
@@ -276,41 +279,43 @@ called before the first call to :c:func:`FIRKodeEvolve` or directly after
    :math:`s = \lceil (\mathrm{ord}+1)/2 \rceil`. As this version of FIRKODE
    provides only :math:`s = 3`, it accepts only the orders 4 and 5.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``ord`` -- the requested order of accuracy, 4 or 5; a non-positive value selects the default method.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param ord: the requested order of accuracy, 4 or 5; a non-positive value selects the default method.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- ``ord`` selects a number of stages other than 3.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: ``ord`` selects a number of stages other than 3.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumStages(void* firkode_mem, int* s_ptr)
 
    The function :c:func:`FIRKodeGetNumStages` returns the number of stages
    of the current method.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``s_ptr`` -- the number of stages.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param s_ptr: the number of stages.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetCurrentTable(void* firkode_mem, FIRKodeTable* tbl_ptr)
 
    The function :c:func:`FIRKodeGetCurrentTable` returns a pointer to the
    coefficient table of the current method (see :numref:`FIRKODE.Usage.Tables`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tbl_ptr`` -- the coefficient table.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tbl_ptr: the coefficient table.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The returned table is owned by FIRKODE and must not be modified or
@@ -350,17 +355,17 @@ then attach it with the following function.
    ``SUNMatrix`` object ``A`` (if applicable) to FIRKODE, initializing the
    FIRKLS linear solver interface.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``LS`` -- ``SUNLinearSolver`` object to use for solving linear systems of the form :eq:`FIRKODE_Newton_block`.
-      - ``A`` -- ``SUNMatrix`` object used as a template for the Jacobian (or ``NULL`` if not applicable).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param LS: ``SUNLinearSolver`` object to use for solving linear systems of the form :eq:`FIRKODE_Newton_block`.
+   :param A: ``SUNMatrix`` object used as a template for the Jacobian (or ``NULL`` if not applicable).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The FIRKLS initialization was successful.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_ILL_INPUT`` -- The FIRKLS interface is not compatible with the ``LS`` or ``A`` input objects or is incompatible with the current ``N_Vector`` module, or :c:func:`FIRKodeInit` has not been called.
-      - ``FIRKLS_SUNLS_FAIL`` -- A call to the ``LS`` object failed.
-      - ``FIRKLS_MEM_FAIL`` -- A memory allocation request failed.
+   :retval FIRKLS_SUCCESS: The FIRKLS initialization was successful.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_ILL_INPUT: The FIRKLS interface is not compatible with the ``LS`` or ``A`` input objects or is incompatible with the current ``N_Vector`` module, ``LS`` is the object attached with :c:func:`FIRKodeSetMassLinearSolver`, or :c:func:`FIRKodeInit` has not been called.
+   :retval FIRKLS_SUNLS_FAIL: A call to the ``LS`` object failed.
+   :retval FIRKLS_MEM_FAIL: A memory allocation request failed.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       If ``LS`` is a matrix-based linear solver, then the template Jacobian
@@ -390,6 +395,13 @@ then attach it with the following function.
       :ref:`SUNMATRIX_BAND <SUNMatrix.Band>` matrix types; for other matrix
       types a Jacobian routine must be supplied with :c:func:`FIRKodeSetJacFn`.
 
+      The mass matrix linear solver attached with
+      :c:func:`FIRKodeSetMassLinearSolver` must be a distinct
+      ``SUNLinearSolver`` object: both interfaces install their own
+      matrix-vector product routine in the solver, and a direct solver
+      holds one factorization. The same object is rejected in either order
+      of attachment.
+
 
 .. _FIRKODE.Usage.mass_solver:
 
@@ -412,18 +424,18 @@ difference quotients.
    ``SUNMatrix`` object ``M`` (if applicable) to FIRKODE for the solution of
    linear systems with the mass matrix.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``LS`` -- ``SUNLinearSolver`` object to use for solving linear systems with the mass matrix.
-      - ``M`` -- ``SUNMatrix`` object used as a template for the mass matrix (or ``NULL`` for a matrix-free linear solver).
-      - ``time_dep`` -- flag denoting whether the mass matrix depends on the independent variable. Only ``SUNFALSE`` is supported.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param LS: ``SUNLinearSolver`` object to use for solving linear systems with the mass matrix.
+   :param M: ``SUNMatrix`` object used as a template for the mass matrix (or ``NULL`` for a matrix-free linear solver).
+   :param time_dep: flag denoting whether the mass matrix depends on the independent variable. Only ``SUNFALSE`` is supported.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The call was successful.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_ILL_INPUT`` -- The FIRKLS interface is not compatible with the ``LS`` or ``M`` input objects or with the current ``N_Vector`` module, ``time_dep`` is ``SUNTRUE``, or :c:func:`FIRKodeInit` has not been called.
-      - ``FIRKLS_SUNLS_FAIL`` -- A call to the ``LS`` object failed.
-      - ``FIRKLS_MEM_FAIL`` -- A memory allocation request failed.
+   :retval FIRKLS_SUCCESS: The call was successful.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_ILL_INPUT: The FIRKLS interface is not compatible with the ``LS`` or ``M`` input objects or with the current ``N_Vector`` module, ``time_dep`` is ``SUNTRUE``, ``LS`` is the object attached with :c:func:`FIRKodeSetLinearSolver`, or :c:func:`FIRKodeInit` has not been called.
+   :retval FIRKLS_SUNLS_FAIL: A call to the ``LS`` object failed.
+   :retval FIRKLS_MEM_FAIL: A memory allocation request failed.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The mass matrix linear solver and the Jacobian linear solver attached
@@ -431,7 +443,9 @@ difference quotients.
       (in which case ``M`` and the Jacobian template ``A`` must have the same
       ``SUNMatrix`` type, since the block system matrix :math:`M - \gamma J`
       is assembled from both) or both be matrix-free; mixed configurations
-      are rejected at the first call to :c:func:`FIRKodeEvolve`.
+      are rejected at the first call to :c:func:`FIRKodeEvolve`. The two
+      must be distinct ``SUNLinearSolver`` objects (see
+      :c:func:`FIRKodeSetLinearSolver`).
 
       If ``LS`` is a matrix-based linear solver, then the template mass
       matrix ``M`` will be used in the solve process, so if additional storage
@@ -474,16 +488,16 @@ prior to a continuation call to :c:func:`FIRKodeEvolve`.
    of functions :math:`g_i(t,y)` are to be found while the IVP is being
    solved.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nrtfn`` -- is the number of root functions :math:`g_i`.
-      - ``g`` -- is the C function which defines the ``nrtfn`` functions :math:`g_i(t,y)` whose roots are sought. See :c:type:`FIRKRootFn` for details.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nrtfn: is the number of root functions :math:`g_i`.
+   :param g: is the C function which defines the ``nrtfn`` functions :math:`g_i(t,y)` whose roots are sought. See :c:type:`FIRKRootFn` for details.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The ``firkode_mem`` argument was ``NULL``.
-      - ``FIRK_MEM_FAIL`` -- A memory allocation failed.
-      - ``FIRK_ILL_INPUT`` -- The function ``g`` is ``NULL``, but ``nrtfn`` :math:`> 0`.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The ``firkode_mem`` argument was ``NULL``.
+   :retval FIRK_MEM_FAIL: A memory allocation failed.
+   :retval FIRK_ILL_INPUT: The function ``g`` is ``NULL``, but ``nrtfn`` :math:`> 0`.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       If a new IVP is to be solved with a call to :c:func:`FIRKodeReInit`,
@@ -506,42 +520,42 @@ are modified if the user has set a stop time (with
 
    The function :c:func:`FIRKodeEvolve` integrates the ODE over an interval in :math:`t`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tout`` -- the next time at which a computed solution is desired.
-      - ``yout`` -- the computed solution vector.
-      - ``tret_ptr`` -- the time reached by the solver (output).
-      - ``itask`` -- a flag indicating the job of the solver for the next user step. The ``FIRK_NORMAL`` option causes the solver to take internal steps until it has reached or just passed the user-specified ``tout`` parameter. The solver then interpolates in order to return an approximate value of :math:`y(t_{out})`; the interpolant is the collocation polynomial of degree :math:`s`, whose accuracy (order :math:`s + 1`) is below that of the method at the step ends (order :math:`2s - 1`), so for a full-order value at a final time make it a stop time with :c:func:`FIRKodeSetStopTime`. The ``FIRK_ONE_STEP`` option tells the solver to take just one internal step and then return the solution at the point reached by that step.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tout: the next time at which a computed solution is desired.
+   :param yout: the computed solution vector.
+   :param tret_ptr: the time reached by the solver (output).
+   :param itask: a flag indicating the job of the solver for the next user step. The ``FIRK_NORMAL`` option causes the solver to take internal steps until it has reached or just passed the user-specified ``tout`` parameter. The solver then interpolates in order to return an approximate value of :math:`y(t_{out})`; the interpolant is the collocation polynomial of degree :math:`s`, whose accuracy (order :math:`s + 1`) is below that of the method at the step ends (order :math:`2s - 1`), so for a full-order value at a final time make it a stop time with :c:func:`FIRKodeSetStopTime`. The ``FIRK_ONE_STEP`` option tells the solver to take just one internal step and then return the solution at the point reached by that step.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- :c:func:`FIRKodeEvolve` succeeded and no roots were found.
-      - ``FIRK_TSTOP_RETURN`` -- :c:func:`FIRKodeEvolve` succeeded by reaching the stopping point specified through the optional input function :c:func:`FIRKodeSetStopTime`.
-      - ``FIRK_ROOT_RETURN`` -- :c:func:`FIRKodeEvolve` succeeded and found one or more roots. In this case, ``tret_ptr`` is the location of the root. If ``nrtfn`` :math:`> 1`, call :c:func:`FIRKodeGetRootInfo` to see which :math:`g_i` were found to have a root.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized through a previous call to :c:func:`FIRKodeCreate`.
-      - ``FIRK_NO_MALLOC`` -- The FIRKODE memory was not allocated by a call to :c:func:`FIRKodeInit`.
-      - ``FIRK_ILL_INPUT`` -- One of the inputs to :c:func:`FIRKodeEvolve` was illegal, or some other input to the solver was illegal or missing. The latter category includes the following situations: the tolerances have not been set; no linear solver has been attached; a component of the error weight vector became zero during internal time-stepping; the direction of a fixed step size disagrees with ``tout``; a root of one of the root functions was found both at a point :math:`t` and also very near :math:`t`.
-      - ``FIRK_TOO_CLOSE`` -- The initial time :math:`t_0` and the output time :math:`t_{out}` are too close to each other and the user did not specify an initial step size.
-      - ``FIRK_TOO_MUCH_WORK`` -- The solver took ``mxstep`` internal steps but still could not reach ``tout``. The default value for ``mxstep`` is 500.
-      - ``FIRK_TOO_MUCH_ACC`` -- The solver could not satisfy the accuracy demanded by the user for some internal step.
-      - ``FIRK_ERR_FAILURE`` -- Either error test failures occurred too many times (default 7) during one internal time step, or with :math:`|h| = h_{min}`.
-      - ``FIRK_CONV_FAILURE`` -- Either convergence test failures occurred too many times (default 10) during one internal time step, or with :math:`|h| = h_{min}`, or, in fixed-step mode, the Newton iteration failed with current Jacobian data (a failure with older data is retried once with a new Jacobian).
-      - ``FIRK_LINIT_FAIL`` -- The linear solver interface's initialization function failed.
-      - ``FIRK_LSETUP_FAIL`` -- The linear solver interface's setup function failed in an unrecoverable manner.
-      - ``FIRK_LSOLVE_FAIL`` -- The linear solver interface's solve function failed in an unrecoverable manner.
-      - ``FIRK_RHSFUNC_FAIL`` -- The right-hand side function failed in an unrecoverable manner.
-      - ``FIRK_FIRST_RHSFUNC_ERR`` -- The right-hand side function had a recoverable error at the first call.
-      - ``FIRK_REPTD_RHSFUNC_ERR`` -- Convergence test failures occurred too many times due to repeated recoverable errors in the right-hand side function. This flag will also be returned if the right-hand side function had repeated recoverable errors during the estimation of an initial step size.
-      - ``FIRK_UNREC_RHSFUNC_ERR`` -- The right-hand function had a recoverable error, but no recovery was possible. This occurs when the right-hand side function fails recoverably when evaluated at the beginning of a step.
-      - ``FIRK_RTFUNC_FAIL`` -- The rootfinding function failed.
-      - ``FIRK_MASSINIT_FAIL`` -- The mass matrix solver interface's initialization function failed.
-      - ``FIRK_MASSSETUP_FAIL`` -- The mass matrix solver interface's setup function failed.
-      - ``FIRK_MASSSOLVE_FAIL`` -- The mass matrix solve failed in an unrecoverable manner.
-      - ``FIRK_MASSMULT_FAIL`` -- The mass matrix-vector product failed.
-      - ``FIRK_TABLE_FAIL`` -- The coefficient table of the selected method could not be constructed.
-      - ``FIRK_CONTROLLER_ERR`` -- A call to the time step adaptivity controller failed.
-      - ``FIRK_VECTOROP_ERR`` -- A vector operation failed.
-      - ``FIRK_MEM_FAIL`` -- A memory allocation of the initial setup failed.
-      - ``FIRK_UNRECOGNIZED_ERR`` -- An internal failure with no code of its own; please report it.
+   :retval FIRK_SUCCESS: :c:func:`FIRKodeEvolve` succeeded and no roots were found.
+   :retval FIRK_TSTOP_RETURN: :c:func:`FIRKodeEvolve` succeeded by reaching the stopping point specified through the optional input function :c:func:`FIRKodeSetStopTime`.
+   :retval FIRK_ROOT_RETURN: :c:func:`FIRKodeEvolve` succeeded and found one or more roots. In this case, ``tret_ptr`` is the location of the root. If ``nrtfn`` :math:`> 1`, call :c:func:`FIRKodeGetRootInfo` to see which :math:`g_i` were found to have a root.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized through a previous call to :c:func:`FIRKodeCreate`.
+   :retval FIRK_NO_MALLOC: The FIRKODE memory was not allocated by a call to :c:func:`FIRKodeInit`.
+   :retval FIRK_ILL_INPUT: One of the inputs to :c:func:`FIRKodeEvolve` was illegal, or some other input to the solver was illegal or missing. The latter category includes the following situations: the tolerances have not been set; no linear solver has been attached; a component of the error weight vector became zero during internal time-stepping; the direction of a fixed step size disagrees with ``tout``; a root of one of the root functions was found both at a point :math:`t` and also very near :math:`t`.
+   :retval FIRK_TOO_CLOSE: The initial time :math:`t_0` and the output time :math:`t_{out}` are too close to each other and the user did not specify an initial step size.
+   :retval FIRK_TOO_MUCH_WORK: The solver took ``mxstep`` internal steps but still could not reach ``tout``. The default value for ``mxstep`` is 500.
+   :retval FIRK_TOO_MUCH_ACC: The solver could not satisfy the accuracy demanded by the user for some internal step.
+   :retval FIRK_ERR_FAILURE: Either error test failures occurred too many times (default 7) during one internal time step, or with :math:`|h| = h_{min}`.
+   :retval FIRK_CONV_FAILURE: Either convergence test failures occurred too many times (default 10) during one internal time step, or with :math:`|h| = h_{min}`, or, in fixed-step mode, the Newton iteration failed with current Jacobian data (a failure with older data is retried once with a new Jacobian).
+   :retval FIRK_LINIT_FAIL: The linear solver interface's initialization function failed.
+   :retval FIRK_LSETUP_FAIL: The linear solver interface's setup function failed in an unrecoverable manner.
+   :retval FIRK_LSOLVE_FAIL: The linear solver interface's solve function failed in an unrecoverable manner.
+   :retval FIRK_RHSFUNC_FAIL: The right-hand side function failed in an unrecoverable manner.
+   :retval FIRK_FIRST_RHSFUNC_ERR: The right-hand side function had a recoverable error at the first call.
+   :retval FIRK_REPTD_RHSFUNC_ERR: Convergence test failures occurred too many times due to repeated recoverable errors in the right-hand side function. This flag will also be returned if the right-hand side function had repeated recoverable errors during the estimation of an initial step size.
+   :retval FIRK_UNREC_RHSFUNC_ERR: The right-hand function had a recoverable error, but no recovery was possible. This occurs when the right-hand side function fails recoverably when evaluated at the beginning of a step.
+   :retval FIRK_RTFUNC_FAIL: The rootfinding function failed.
+   :retval FIRK_MASSINIT_FAIL: The mass matrix solver interface's initialization function failed.
+   :retval FIRK_MASSSETUP_FAIL: The mass matrix solver interface's setup function failed.
+   :retval FIRK_MASSSOLVE_FAIL: The mass matrix solve failed in an unrecoverable manner.
+   :retval FIRK_MASSMULT_FAIL: The mass matrix-vector product failed.
+   :retval FIRK_TABLE_FAIL: The coefficient table of the selected method could not be constructed.
+   :retval FIRK_CONTROLLER_ERR: A call to the time step adaptivity controller failed.
+   :retval FIRK_VECTOROP_ERR: A vector operation failed.
+   :retval FIRK_MEM_FAIL: A memory allocation of the initial setup failed.
+   :retval FIRK_UNRECOGNIZED_ERR: An internal failure with no code of its own; please report it.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The vector ``yout`` can occupy the same space as the vector ``y0`` of
@@ -671,19 +685,19 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetOptions` sets FIRKODE options from an array
    of strings, typically the command-line arguments of the program.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``firkid`` -- the prefix of the options to read; ``NULL`` or ``""`` selects ``"firkode"``.
-      - ``file_name`` -- must be ``NULL`` or ``""``: file-based options are not supported.
-      - ``argc`` -- the number of strings in ``argv``.
-      - ``argv`` -- the strings; ``argv[0]`` is skipped, as in the arguments of ``main``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param firkid: the prefix of the options to read; ``NULL`` or ``""`` selects ``"firkode"``.
+   :param file_name: must be ``NULL`` or ``""``: file-based options are not supported.
+   :param argc: the number of strings in ``argv``.
+   :param argv: the strings; ``argv[0]`` is skipped, as in the arguments of ``main``.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The options were set.
-      - ``FIRK_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRK_ILL_INPUT`` -- A file name was given, a key lacks its value, or a value is not one of the names accepted.
-      - ``FIRK_MEM_FAIL`` -- A memory allocation failed.
-      - Any other value is the return value of the setter of a key, e.g. ``FIRK_ILL_INPUT`` for an EXPERT option in BEGINNER mode or ``FIRKLS_LMEM_NULL`` for a linear solver option before :c:func:`FIRKodeSetLinearSolver`.
+   :retval FIRK_SUCCESS: The options were set.
+   :retval FIRK_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRK_ILL_INPUT: A file name was given, a key lacks its value, or a value is not one of the names accepted.
+   :retval FIRK_MEM_FAIL: A memory allocation failed.
+   :returns: Any other value is the return value of the setter of a key, e.g. ``FIRK_ILL_INPUT`` for an EXPERT option in BEGINNER mode or ``FIRKLS_LMEM_NULL`` for a linear solver option before :c:func:`FIRKodeSetLinearSolver`.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Each option is a key, ``<firkid>.<key>``, followed by its value(s) as
@@ -739,13 +753,13 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetUserData` specifies the user data block
    ``user_data`` and attaches it to the main FIRKODE memory block.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``user_data`` -- pointer to the user data.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param user_data: pointer to the user data.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       If specified, the pointer to ``user_data`` is passed to all
@@ -764,13 +778,13 @@ Main solver optional input functions
    of steps to be taken by the solver in its attempt to reach the next
    output time.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mxsteps`` -- maximum allowed number of steps.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mxsteps: maximum allowed number of steps.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Passing ``mxsteps = 0`` results in FIRKODE using the default value
@@ -782,13 +796,13 @@ Main solver optional input functions
    of messages issued by the solver warning that :math:`t + h = t` on the
    next internal step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mxhnil`` -- maximum number of warning messages (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mxhnil: maximum number of warning messages (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 10. A negative value for ``mxhnil`` indicates that
@@ -798,14 +812,14 @@ Main solver optional input functions
 
    The function :c:func:`FIRKodeSetInitStep` specifies the initial step size.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hin`` -- value of the initial step size to be attempted. Pass 0.0 to have FIRKODE use the default value.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hin: value of the initial step size to be attempted. Pass 0.0 to have FIRKODE use the default value.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- A fixed step size is in use.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: A fixed step size is in use.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       By default, FIRKODE estimates the initial step size to be the solution
@@ -819,14 +833,14 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetMinStep` specifies a lower bound on the
    magnitude of the step size.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hmin`` -- minimum absolute value of the step size (:math:`\ge 0.0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hmin: minimum absolute value of the step size (:math:`\ge 0.0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- Either ``hmin`` is negative or it exceeds the maximum allowable step size.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: Either ``hmin`` is negative or it exceeds the maximum allowable step size.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.0. Pass ``hmin = 0.0`` to obtain the default.
@@ -840,14 +854,14 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetMaxStep` specifies an upper bound on the
    magnitude of the step size.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hmax`` -- maximum absolute value of the step size (:math:`\ge 0.0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hmax: maximum absolute value of the step size (:math:`\ge 0.0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- Either ``hmax`` is negative or it is smaller than the minimum allowable step size.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: Either ``hmax`` is negative or it is smaller than the minimum allowable step size.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Pass ``hmax = 0.0`` to obtain the default value :math:`\infty`.
@@ -857,13 +871,13 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetFixedStep` disables time step adaptivity
    and specifies the fixed step size to be used for all internal steps.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hfixed`` -- the fixed step size (with sign indicating the direction of integration). Pass 0.0 to re-enable time step adaptivity.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hfixed: the fixed step size (with sign indicating the direction of integration). Pass 0.0 to re-enable time step adaptivity.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       In fixed-step mode the local error estimate is not computed, the error
@@ -879,14 +893,14 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetStopTime` specifies the value of the
    independent variable :math:`t` past which the solution is not to proceed.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tstop`` -- value of the independent variable past which the solution is not to proceed.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tstop: value of the independent variable past which the solution is not to proceed.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The value of ``tstop`` is behind the current :math:`t` value, in the direction of integration.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The value of ``tstop`` is behind the current :math:`t` value, in the direction of integration.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default, if this routine is not called, is that no stop time is
@@ -903,24 +917,25 @@ Main solver optional input functions
    the specified ``tstop`` (instead of merely copying the internal solution
    :math:`y_n`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``interp`` -- flag indicating to use interpolation (``SUNTRUE``) or copy (``SUNFALSE``).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param interp: flag indicating to use interpolation (``SUNTRUE``) or copy (``SUNFALSE``).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeClearStopTime(void* firkode_mem)
 
    Disables the stop time set with :c:func:`FIRKodeSetStopTime`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
+   :param firkode_mem: pointer to the FIRKODE memory block.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The stop time has been disabled.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The stop time has been disabled.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The stop time can be re-enabled though a new call to
@@ -931,14 +946,14 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetMaxErrTestFails` specifies the maximum
    number of error test failures permitted in attempting one step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``maxnef`` -- maximum number of error test failures allowed on one step (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param maxnef: maximum number of error test failures allowed on one step (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 7. A non-positive value restores the default.
@@ -948,14 +963,14 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetMaxConvFails` specifies the maximum number
    of nonlinear solver convergence failures permitted during one step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``maxncf`` -- maximum number of allowable nonlinear solver convergence failures per step (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param maxncf: maximum number of allowable nonlinear solver convergence failures per step (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 10. A non-positive value restores the default.
@@ -966,15 +981,15 @@ Main solver optional input functions
    re-evaluated and the linear solver set up again (the matrix
    :math:`M - \gamma J` refactored or the preconditioner recomputed).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``policy`` -- ``FIRK_POLICY_RADAU5`` or ``FIRK_POLICY_PERIODIC``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param policy: ``FIRK_POLICY_RADAU5`` or ``FIRK_POLICY_PERIODIC``.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- ``policy`` is not one of the two values.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: ``policy`` is not one of the two values.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       ``FIRK_POLICY_RADAU5``, the default, is the strategy of RADAU5: after an
@@ -1007,15 +1022,15 @@ Main solver optional input functions
    of calls to the linear solver setup function (which updates the matrix
    :math:`M - \gamma J` and its factorization or preconditioner).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``msbp`` -- the number of steps between linear solver setup calls (:math:`\ge 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param msbp: the number of steps between linear solver setup calls (:math:`\ge 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The value of ``msbp`` is negative.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The value of ``msbp`` is negative.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 20; passing 0 restores the default. Under
@@ -1033,14 +1048,14 @@ Main solver optional input functions
    relative change in :math:`\gamma` since the last linear solver setup that
    does not trigger a new setup.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``dgmax_lsetup`` -- the relative change threshold (:math:`\ge 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param dgmax_lsetup: the relative change threshold (:math:`\ge 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.3. A negative value restores the default. The
@@ -1052,15 +1067,15 @@ Main solver optional input functions
    The function :c:func:`FIRKodeSetPredictorMethod` selects the method used
    to compute the initial guess for the stage increments of each step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``method`` -- ``FIRK_PREDICT_EXTRAPOLATE`` (extrapolate the collocation polynomial of the previous step, the default) or ``FIRK_PREDICT_TRIVIAL`` (start from the current solution, i.e., zero increments).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param method: ``FIRK_PREDICT_EXTRAPOLATE`` (extrapolate the collocation polynomial of the previous step, the default) or ``FIRK_PREDICT_TRIVIAL`` (start from the current solution, i.e., zero increments).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The value of ``method`` is illegal.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The value of ``method`` is illegal.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The trivial predictor is always used on the first step and after a
@@ -1073,14 +1088,14 @@ Main solver optional input functions
    second filtering of the local error estimate on the first step and after
    a rejected step (see :numref:`FIRKODE.Mathematics.error`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``onoff`` -- ``SUNTRUE`` to enable (the default) or ``SUNFALSE`` to disable the second filtering.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param onoff: ``SUNTRUE`` to enable (the default) or ``SUNFALSE`` to disable the second filtering.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_input.adapt:
@@ -1132,17 +1147,17 @@ has any effect in fixed-step mode.
 
    Sets a user-supplied time step controller object.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``C`` -- user-supplied time adaptivity controller. If ``C`` is ``NULL`` then the default controller is created.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param C: user-supplied time adaptivity controller. If ``C`` is ``NULL`` then the default controller is created.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_MEM_FAIL`` -- ``C`` was ``NULL`` and the default controller could not be allocated, or the previous controller could not be destroyed.
-      - ``FIRK_CONTROLLER_ERR`` -- ``C`` was ``NULL`` and the parameters of the default controller could not be set.
-      - ``FIRK_ILL_INPUT`` -- The controller is not of type ``SUN_ADAPTCONTROLLER_H``.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_MEM_FAIL: ``C`` was ``NULL`` and the default controller could not be allocated, or the previous controller could not be destroyed.
+   :retval FIRK_CONTROLLER_ERR: ``C`` was ``NULL`` and the parameters of the default controller could not be set.
+   :retval FIRK_ILL_INPUT: The controller is not of type ``SUN_ADAPTCONTROLLER_H``.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default controller is the implicit Gustafsson controller
@@ -1162,16 +1177,16 @@ has any effect in fixed-step mode.
    controller of FIRKODE, which frees it with the integrator or when it is
    replaced.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``cname`` -- the name of the controller: ``"Soderlind"``, ``"PID"``, ``"PI"``, ``"I"``, ``"ExpGus"``, ``"ImpGus"``, ``"H0211"``, ``"H0321"``, ``"H211"`` or ``"H312"``, which selects the constructor ``SUNAdaptController_<cname>``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param cname: the name of the controller: ``"Soderlind"``, ``"PID"``, ``"PI"``, ``"I"``, ``"ExpGus"``, ``"ImpGus"``, ``"H0211"``, ``"H0321"``, ``"H211"`` or ``"H312"``, which selects the constructor ``SUNAdaptController_<cname>``.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The controller was created and set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_MEM_FAIL`` -- The controller could not be allocated.
-      - ``FIRK_ILL_INPUT`` -- ``cname`` is ``NULL`` or not one of the names above; the current controller is kept.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The controller was created and set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_MEM_FAIL: The controller could not be allocated.
+   :retval FIRK_ILL_INPUT: ``cname`` is ``NULL`` or not one of the names above; the current controller is kept.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The names are those of ``ARKodeSetAdaptControllerByName`` except
@@ -1184,15 +1199,15 @@ has any effect in fixed-step mode.
    Specifies the safety factor to be applied to the step size proposed by the
    time step controller.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``safety`` -- safety factor (:math:`0 < \mathrm{safety} \le 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param safety: safety factor (:math:`0 < \mathrm{safety} \le 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The safety factor exceeds 1.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The safety factor exceeds 1.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.9; a non-positive value restores the default.
@@ -1202,15 +1217,15 @@ has any effect in fixed-step mode.
    Specifies the bias to be applied to the error estimates within the time
    step controller.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``bias`` -- bias applied to the error estimate (:math:`\ge 1`); any value below 1 restores the controller's default.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param bias: bias applied to the error estimate (:math:`\ge 1`); any value below 1 restores the controller's default.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized, or no controller is attached.
-      - ``FIRK_CONTROLLER_ERR`` -- The call to the controller failed.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized, or no controller is attached.
+   :retval FIRK_CONTROLLER_ERR: The call to the controller failed.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       This function must be called *after* :c:func:`FIRKodeSetAdaptController`
@@ -1220,14 +1235,14 @@ has any effect in fixed-step mode.
 
    Specifies the maximum growth factor of the step size between two steps.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mx_growth`` -- maximum allowed growth factor (:math:`> 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mx_growth: maximum allowed growth factor (:math:`> 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 8.0; any value :math:`\le 1` restores the default.
@@ -1236,14 +1251,14 @@ has any effect in fixed-step mode.
 
    Specifies the minimum reduction factor of the step size between two steps.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``eta_min`` -- minimum allowed reduction factor (:math:`0 < \eta_{\min} < 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param eta_min: minimum allowed reduction factor (:math:`0 < \eta_{\min} < 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.2; any value outside :math:`(0, 1)` restores
@@ -1255,15 +1270,15 @@ has any effect in fixed-step mode.
    which the step size is left unchanged after a successful step, so that
    the matrix :math:`M - \gamma J` need not be rebuilt.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``lb`` -- lower bound of the interval (:math:`\le 1`).
-      - ``ub`` -- upper bound of the interval (:math:`\ge 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param lb: lower bound of the interval (:math:`\le 1`).
+   :param ub: upper bound of the interval (:math:`\ge 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default interval is :math:`[1.0, 1.2]`; an interval that does not
@@ -1274,14 +1289,14 @@ has any effect in fixed-step mode.
    Specifies the maximum growth factor of the step size after the first
    step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``etamx1`` -- maximum allowed growth factor after the first step (:math:`> 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param etamx1: maximum allowed growth factor after the first step (:math:`> 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 10000.0; any value :math:`\le 1` restores the
@@ -1292,14 +1307,14 @@ has any effect in fixed-step mode.
    Specifies the maximum step size ratio to be used after a number of
    consecutive error test failures.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``etamxf`` -- maximum step size ratio after repeated error test failures (:math:`0 < \eta_{\max,f} \le 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param etamxf: maximum step size ratio after repeated error test failures (:math:`0 < \eta_{\max,f} \le 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.3; any value outside :math:`(0, 1]` restores
@@ -1312,14 +1327,14 @@ has any effect in fixed-step mode.
    step size ratio is limited by the value set with
    :c:func:`FIRKodeSetMaxEFailGrowth`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``small_nef`` -- number of error test failures (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param small_nef: number of error test failures (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 2; a non-positive value restores the default.
@@ -1331,14 +1346,14 @@ has any effect in fixed-step mode.
    test, in which case the reduction is computed from the observed
    convergence rate, see :numref:`FIRKODE.Mathematics.Newton`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``etacf`` -- step size reduction factor (:math:`0 < \eta_{cf} \le 1`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param etacf: step size reduction factor (:math:`0 < \eta_{cf} \le 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.25; any value outside :math:`(0, 1]` restores
@@ -1350,14 +1365,14 @@ has any effect in fixed-step mode.
    number of Newton iterations of the last nonlinear solve (see
    :numref:`FIRKODE.Mathematics.adaptivity`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``onoff`` -- ``SUNTRUE`` to enable (the default) or ``SUNFALSE`` to disable the adjustment.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param onoff: ``SUNTRUE`` to enable (the default) or ``SUNFALSE`` to disable the adjustment.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_input.nls:
@@ -1398,14 +1413,14 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    The function :c:func:`FIRKodeSetMaxNonlinIters` specifies the maximum
    number of Newton iterations permitted per step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``maxcor`` -- maximum number of Newton iterations per step (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param maxcor: maximum number of Newton iterations per step (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 7; a non-positive value restores the default.
@@ -1416,14 +1431,14 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    factor :math:`\epsilon_{nls}` used in the nonlinear convergence test
    :eq:`FIRKODE_nlstest`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nlscoef`` -- coefficient in the nonlinear convergence test (:math:`> 0`), or a non-positive value for the automatic default.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nlscoef: coefficient in the nonlinear convergence test (:math:`> 0`), or a non-positive value for the automatic default.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       By default :math:`\epsilon_{nls}` follows the relative tolerance as in
@@ -1443,14 +1458,14 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    The function :c:func:`FIRKodeSetNonlinDivergenceRate` specifies the
    contraction rate above which the Newton iteration is declared divergent.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``theta_max`` -- the divergence threshold (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param theta_max: the divergence threshold (:math:`0 < \theta_{max} < 1`).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`); or ``theta_max`` :math:`\geq 1`, for which the stopping test :math:`\eta_k \lVert \Delta Z_k \rVert \leq \epsilon_{nls}` would hold for a diverging iteration.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.99; a non-positive value restores the default.
@@ -1461,14 +1476,14 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    rate of the Newton iteration above which the Jacobian is re-evaluated at
    the next step even though the iteration converged.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``theta_jbad`` -- the contraction rate threshold; values :math:`\ge 1` disable the test.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param theta_jbad: the contraction rate threshold; values :math:`\ge 1` disable the test.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The test is disabled by default (the value 1.0); a non-positive value
@@ -1483,14 +1498,14 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    iteration, where :math:`\eta` is the last factor of the previous solve
    (see :numref:`FIRKODE.Mathematics.Newton`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``rate_exp`` -- the exponent :math:`p`; a non-positive value restores the default 0.8 of RADAU5.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param rate_exp: the exponent :math:`p`; a non-positive value restores the default 0.8 of RADAU5.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       A smaller exponent makes the first iteration's test stricter.
@@ -1504,15 +1519,15 @@ solve the stage equations (see :numref:`FIRKODE.Mathematics.Newton`).
    :c:func:`FIRKodeGetLastNonlinConvRate` after a solve that converged in one
    iteration.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``theta_jac`` -- the rate, less than 1; a non-positive value restores the default 0.001.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param theta_jac: the rate, less than 1; a non-positive value restores the default 0.001.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- ``theta_jac`` is 1 or larger.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: ``theta_jac`` is 1 or larger.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_input.ls:
@@ -1574,15 +1589,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    approximation routine to be used for a matrix-based solver within the
    FIRKLS interface.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``jac`` -- user-defined Jacobian approximation function; pass ``NULL`` to use the internal difference-quotient approximation.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param jac: user-defined Jacobian approximation function; pass ``NULL`` to use the internal difference-quotient approximation.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- A Jacobian routine was supplied for a linear solver without a ``SUNMatrix``. (Without a Jacobian routine, a matrix type for which no difference-quotient approximation exists is reported by :c:func:`FIRKodeEvolve` as ``FIRK_LINIT_FAIL``.)
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: A Jacobian routine was supplied for a linear solver without a ``SUNMatrix``. (Without a Jacobian routine, a matrix type for which no difference-quotient approximation exists is reported by :c:func:`FIRKodeEvolve` as ``FIRK_LINIT_FAIL``.)
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       By default, FIRKLS uses an internal difference quotient function for
@@ -1598,16 +1613,16 @@ called *after* the FIRKLS linear solver interface has been initialized with
    approximation routine to be used for a matrix-based solver within the
    FIRKLS interface.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``linsys`` -- user-defined linear system approximation function; pass ``NULL`` to use the internal routine.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param linsys: user-defined linear system approximation function; pass ``NULL`` to use the internal routine.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The linear solver is not matrix-based.
-      - ``FIRKLS_MEM_FAIL`` -- The copy of the Jacobian, saved again when the default is restored, could not be allocated.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The linear solver is not matrix-based.
+   :retval FIRKLS_MEM_FAIL: The copy of the Jacobian, saved again when the default is restored, could not be allocated.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       By default, FIRKLS uses an internal linear system function that
@@ -1629,16 +1644,16 @@ called *after* the FIRKLS linear solver interface has been initialized with
    The function :c:func:`FIRKodeSetJacEvalFrequency` specifies the number of
    steps after which the Jacobian information is considered out-of-date.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``msbj`` -- the Jacobian re-computation or preconditioner update frequency (:math:`\ge 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param msbj: the Jacobian re-computation or preconditioner update frequency (:math:`\ge 0`).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The value of ``msbj`` is negative.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The value of ``msbj`` is negative.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 51; passing 0 restores the default. If the
@@ -1655,15 +1670,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    is attributed to an outdated Jacobian (which is then re-evaluated) rather
    than to the change in :math:`\gamma`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``dgmax_jbad`` -- the relative change threshold (:math:`> 0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param dgmax_jbad: the relative change threshold (:math:`> 0`).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.2; a non-positive value restores the default.
@@ -1675,15 +1690,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    tolerance of an iterative linear solver for the block systems (see
    :numref:`SUNLinSol.FIRKODE.Iterative.Tolerance`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``eplifac`` -- linear convergence safety factor (:math:`\ge 0.0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param eplifac: linear convergence safety factor (:math:`\ge 0.0`).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- ``eplifac`` is negative.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: ``eplifac`` is negative.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.05; passing a zero value restores the
@@ -1700,14 +1715,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    internal Krylov iteration on the coupled stage system of :math:`s` stages
    uses :math:`\sqrt{s}` times this factor.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nrmfac`` -- the norm conversion factor. If ``nrmfac`` is :math:`> 0` then the provided value is used; if ``nrmfac`` is :math:`= 0` then the conversion factor is computed as the square root of the vector length (the default); if ``nrmfac`` is :math:`< 0` then the conversion factor is computed using the vector dot product :math:`\sqrt{v^T v}` for a vector of ones.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nrmfac: the norm conversion factor. If ``nrmfac`` is :math:`> 0` then the provided value is used; if ``nrmfac`` is :math:`= 0` then the conversion factor is computed as the square root of the vector length (the default); if ``nrmfac`` is :math:`< 0` then the conversion factor is computed using the vector dot product :math:`\sqrt{v^T v}` for a vector of ones.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeSetLinearSolutionScaling(void* firkode_mem, sunbooleantype onoff)
 
@@ -1720,15 +1736,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    with :math:`s = 3` stages the block solver preconditions the coupled stage
    system and its solutions are never scaled.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``onoff`` -- flag to enable (``SUNTRUE``) or disable (``SUNFALSE``) the scaling.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param onoff: flag to enable (``SUNTRUE``) or disable (``SUNFALSE``) the scaling.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The flag value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The attached linear solver is not matrix-based.
+   :retval FIRKLS_SUCCESS: The flag value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The attached linear solver is not matrix-based.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The scaling is enabled by default when a matrix-based linear solver is
@@ -1740,17 +1756,17 @@ called *after* the FIRKLS linear solver interface has been initialized with
    The function :c:func:`FIRKodeSetPreconditioner` specifies the
    preconditioner setup and solve functions for an iterative linear solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``pset`` -- user-defined preconditioner setup function. Pass ``NULL`` if no setup is necessary.
-      - ``psolve`` -- user-defined preconditioner solve function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param pset: user-defined preconditioner setup function. Pass ``NULL`` if no setup is necessary.
+   :param psolve: user-defined preconditioner solve function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_SUNLS_FAIL`` -- An error occurred when setting up preconditioning in the ``SUNLinearSolver`` object used by the FIRKLS interface.
-      - ``FIRKLS_ILL_INPUT`` -- The ``SUNLinearSolver`` object does not support user-supplied preconditioning.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUNLS_FAIL: An error occurred when setting up preconditioning in the ``SUNLinearSolver`` object used by the FIRKLS interface.
+   :retval FIRKLS_ILL_INPUT: The ``SUNLinearSolver`` object does not support user-supplied preconditioning.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default is ``NULL`` for both arguments (i.e., no preconditioning).
@@ -1766,15 +1782,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    The function :c:func:`FIRKodeSetJacTimes` specifies the Jacobian-vector
    setup and product functions.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``jtsetup`` -- user-defined Jacobian-vector setup function. Pass ``NULL`` if no setup is necessary.
-      - ``jtimes`` -- user-defined Jacobian-vector product function; pass ``NULL`` to use the internal difference-quotient approximation.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param jtsetup: user-defined Jacobian-vector setup function. Pass ``NULL`` if no setup is necessary.
+   :param jtimes: user-defined Jacobian-vector product function; pass ``NULL`` to use the internal difference-quotient approximation.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The Jacobian-vector product is used by matrix-free linear solvers and,
@@ -1794,15 +1810,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    ODE right-hand side function for use in the internal Jacobian-vector
    product difference quotient approximation.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``jtimesRhsFn`` -- the C function which computes the alternative ODE right-hand side function to use in Jacobian-vector product difference quotient approximations; pass ``NULL`` to use the right-hand side function of the ODE.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param jtimesRhsFn: the C function which computes the alternative ODE right-hand side function to use in Jacobian-vector product difference quotient approximations; pass ``NULL`` to use the right-hand side function of the ODE.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The internal difference quotient approximation is disabled (a user-supplied ``jtimes`` function is in use).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The internal difference quotient approximation is disabled (a user-supplied ``jtimes`` function is in use).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       This function is intended for problems where the right-hand side
@@ -1815,15 +1831,15 @@ called *after* the FIRKLS linear solver interface has been initialized with
    dimension of the Krylov subspace of the internal flexible GMRES iteration
    on the coupled stage system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``maxl`` -- the maximum Krylov subspace dimension (:math:`> 0`); a non-positive value restores the default.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param maxl: the maximum Krylov subspace dimension (:math:`> 0`); a non-positive value restores the default.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default is :math:`\max(5, 3s)` for an :math:`s`-stage method. The
@@ -1841,16 +1857,16 @@ called *after* the FIRKLS linear solver interface has been initialized with
    maximum number of restarts of the internal flexible GMRES iteration on the
    coupled stage system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``maxrs`` -- the maximum number of restarts (:math:`\ge 0`); a negative value restores the default.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param maxrs: the maximum number of restarts (:math:`\ge 0`); a negative value restores the default.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_SUNLS_FAIL`` -- The stacked solver rejected the value.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUNLS_FAIL: The stacked solver rejected the value.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 1.
@@ -1861,17 +1877,17 @@ called *after* the FIRKLS linear solver interface has been initialized with
    Gram-Schmidt orthogonalization of the internal flexible GMRES iteration on
    the coupled stage system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``gstype`` -- ``SUN_MODIFIED_GS`` (the default) or ``SUN_CLASSICAL_GS``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param gstype: ``SUN_MODIFIED_GS`` (the default) or ``SUN_CLASSICAL_GS``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- ``gstype`` is not one of the two values.
-      - ``FIRKLS_SUNLS_FAIL`` -- The internal solver rejected the value.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: ``gstype`` is not one of the two values.
+   :retval FIRKLS_SUNLS_FAIL: The internal solver rejected the value.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Classical Gram-Schmidt needs fewer global reductions per iteration,
@@ -1886,16 +1902,16 @@ called *after* the FIRKLS linear solver interface has been initialized with
    tolerance of the internal flexible GMRES iteration on the coupled stage
    system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``eplifac`` -- linear convergence safety factor (:math:`\ge 0.0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param eplifac: linear convergence safety factor (:math:`\ge 0.0`).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- ``eplifac`` is negative.
-      - ``FIRK_ILL_INPUT`` -- The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: ``eplifac`` is negative.
+   :retval FIRK_ILL_INPUT: The mode is BEGINNER; this is an EXPERT option (see :c:func:`FIRKodeSetMode`).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default value is 0.05; passing a zero value restores the
@@ -1941,15 +1957,16 @@ interface has been initialized with :c:func:`FIRKodeSetMassLinearSolver`.
    required when a non-``NULL`` ``SUNMatrix`` was passed to
    :c:func:`FIRKodeSetMassLinearSolver`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``mass`` -- user-defined mass matrix function of type :c:type:`FIRKLsMassFn`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param mass: user-defined mass matrix function of type :c:type:`FIRKLsMassFn`.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The function ``mass`` is ``NULL`` or the mass linear solver is matrix-free.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The function ``mass`` is ``NULL`` or the mass linear solver is matrix-free.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeSetMassTimes(void* firkode_mem, FIRKLsMassTimesSetupFn msetup, FIRKLsMassTimesVecFn mtimes, void* mtimes_data)
 
@@ -1959,17 +1976,17 @@ interface has been initialized with :c:func:`FIRKodeSetMassLinearSolver`.
    :c:func:`FIRKodeSetMassLinearSolver`; it is optional otherwise (in which
    case the product is computed with :c:func:`SUNMatMatvec` by default).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``msetup`` -- user-defined mass matrix-vector product setup function of type :c:type:`FIRKLsMassTimesSetupFn`, or ``NULL`` if no setup is needed.
-      - ``mtimes`` -- user-defined mass matrix-vector product function of type :c:type:`FIRKLsMassTimesVecFn`.
-      - ``mtimes_data`` -- a pointer to user data passed to ``mtsetup`` and ``mtimes``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param msetup: user-defined mass matrix-vector product setup function of type :c:type:`FIRKLsMassTimesSetupFn`, or ``NULL`` if no setup is needed.
+   :param mtimes: user-defined mass matrix-vector product function of type :c:type:`FIRKLsMassTimesVecFn`.
+   :param mtimes_data: a pointer to user data passed to ``mtsetup`` and ``mtimes``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- The function ``mtimes`` is ``NULL``.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: The function ``mtimes`` is ``NULL``.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Since the mass matrix is constant, the setup function is called at most
@@ -1981,17 +1998,17 @@ interface has been initialized with :c:func:`FIRKodeSetMassLinearSolver`.
    preconditioner setup and solve functions for an iterative mass matrix
    linear solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``psetup`` -- user-defined preconditioner setup function of type :c:type:`FIRKLsMassPrecSetupFn`, or ``NULL`` if no setup is needed.
-      - ``psolve`` -- user-defined preconditioner solve function of type :c:type:`FIRKLsMassPrecSolveFn`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param psetup: user-defined preconditioner setup function of type :c:type:`FIRKLsMassPrecSetupFn`, or ``NULL`` if no setup is needed.
+   :param psolve: user-defined preconditioner solve function of type :c:type:`FIRKLsMassPrecSolveFn`.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
-      - ``FIRKLS_SUNLS_FAIL`` -- An error occurred when setting up preconditioning in the ``SUNLinearSolver`` object.
-      - ``FIRKLS_ILL_INPUT`` -- The ``SUNLinearSolver`` object does not support user-supplied preconditioning.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUNLS_FAIL: An error occurred when setting up preconditioning in the ``SUNLinearSolver`` object.
+   :retval FIRKLS_ILL_INPUT: The ``SUNLinearSolver`` object does not support user-supplied preconditioning.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Since the mass matrix is constant, the setup function is called at most
@@ -2004,18 +2021,18 @@ interface has been initialized with :c:func:`FIRKodeSetMassLinearSolver`.
    multiplied to obtain the residual tolerance of an iterative mass matrix
    linear solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``eplifac`` -- linear convergence safety factor (:math:`\ge 0.0`).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param eplifac: linear convergence safety factor (:math:`\ge 0.0`).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: ``eplifac`` is negative.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
-      The default value is 0.05; passing a non-positive value restores the
-      default.
+      The default value is 0.05; passing 0.0 restores the default.
 
       The tolerance is relative to the right-hand side, so that the mass
       solves have the same relative accuracy whatever the scaling of
@@ -2033,15 +2050,15 @@ interface has been initialized with :c:func:`FIRKodeSetMassLinearSolver`.
    use when converting from the integrator tolerance (WRMS norm) to the mass
    matrix linear solver tolerance (L2 norm).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nrmfac`` -- the norm conversion factor, interpreted as in :c:func:`FIRKodeSetLSNormFactor`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nrmfac: the norm conversion factor, interpreted as in :c:func:`FIRKodeSetLSNormFactor`.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
-      - ``FIRKLS_ILL_INPUT`` -- A negative ``nrmfac`` was given but the vector does not implement :c:func:`N_VDotProd`.
+   :retval FIRKLS_SUCCESS: The optional value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_ILL_INPUT: A negative ``nrmfac`` was given but the vector does not implement :c:func:`N_VDotProd`.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_input.root:
@@ -2069,14 +2086,14 @@ rootfinding algorithm.
    The function :c:func:`FIRKodeSetRootDirection` specifies the direction of
    zero-crossings to be located and returned.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``rootdir_1d`` -- state array of length ``nrtfn``, the number of root functions :math:`g_i`, as specified in the call to the function :c:func:`FIRKodeRootInit`. A value of 0 for ``rootdir_1d[i]`` indicates that crossing in either direction for :math:`g_i` should be reported. A value of +1 or -1 indicates that the solver should report only zero-crossings where :math:`g_i` is increasing or decreasing, respectively.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param rootdir_1d: state array of length ``nrtfn``, the number of root functions :math:`g_i`, as specified in the call to the function :c:func:`FIRKodeRootInit`. A value of 0 for ``rootdir_1d[i]`` indicates that crossing in either direction for :math:`g_i` should be reported. A value of +1 or -1 indicates that the solver should report only zero-crossings where :math:`g_i` is increasing or decreasing, respectively.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The default behavior is to monitor for both zero-crossing directions.
@@ -2087,13 +2104,13 @@ rootfinding algorithm.
    warning if some root function appears to be identically zero at the
    beginning of the integration.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
+   :param firkode_mem: pointer to the FIRKODE memory block.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+   :retval FIRK_SUCCESS: The optional value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       FIRKODE will not report the initial conditions as a possible
@@ -2127,18 +2144,18 @@ step taken by FIRKODE (see :numref:`FIRKODE.Mathematics.dense`).
    used by the solver. The user may request ``k`` :math:`= 0, 1, \ldots, s`,
    where :math:`s` is the number of stages of the method.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``t`` -- the value of the independent variable at which the derivative is to be evaluated.
-      - ``k`` -- the derivative order requested.
-      - ``dky`` -- vector containing the derivative. This vector must be allocated by the user.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param t: the value of the independent variable at which the derivative is to be evaluated.
+   :param k: the derivative order requested.
+   :param dky: vector containing the derivative. This vector must be allocated by the user.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- :c:func:`FIRKodeGetDky` succeeded.
-      - ``FIRK_BAD_K`` -- ``k`` is not in the range :math:`0, 1, \ldots, s`.
-      - ``FIRK_BAD_T`` -- ``t`` is not in the interval :math:`[t_n - h_u, t_n]`.
-      - ``FIRK_BAD_DKY`` -- The ``dky`` argument was ``NULL``.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: :c:func:`FIRKodeGetDky` succeeded.
+   :retval FIRK_BAD_K: ``k`` is not in the range :math:`0, 1, \ldots, s`.
+   :retval FIRK_BAD_T: ``t`` is not in the interval :math:`[t_n - h_u, t_n]`.
+   :retval FIRK_BAD_DKY: The ``dky`` argument was ``NULL``.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       It is only legal to call the function :c:func:`FIRKodeGetDky` after a
@@ -2173,38 +2190,40 @@ Main solver optional output functions
    Returns the cumulative number of internal steps taken by the solver (total
    so far).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nsteps_ptr`` -- number of steps taken by FIRKODE.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nsteps_ptr: number of steps taken by FIRKODE.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumStepAttempts(void* firkode_mem, long int* step_attempts_ptr)
 
    Returns the cumulative number of steps attempted by the solver (total so
    far), including rejected steps.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``step_attempts_ptr`` -- number of steps attempted by FIRKODE.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param step_attempts_ptr: number of steps attempted by FIRKODE.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumRhsEvals(void* firkode_mem, long int* nfevals_ptr)
 
    Returns the number of calls to the user's right-hand side function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nfevals_ptr`` -- number of calls to the user's ``f`` function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nfevals_ptr: number of calls to the user's ``f`` function.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The ``nfevals_ptr`` value returned by :c:func:`FIRKodeGetNumRhsEvals` does
@@ -2215,49 +2234,52 @@ Main solver optional output functions
 
    Returns the number of calls made to the linear solver's setup function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nlinsetups_ptr`` -- number of calls made to the linear solver setup function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nlinsetups_ptr: number of calls made to the linear solver setup function.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumErrTestFails(void* firkode_mem, long int* netfails_ptr)
 
    Returns the number of local error test failures that have occurred.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``netfails_ptr`` -- number of error test failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param netfails_ptr: number of error test failures.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumStepSolveFails(void* firkode_mem, long int* nncfails_ptr)
 
    Returns the number of failed steps due to a nonlinear solver failure.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nncfails_ptr`` -- number of step failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nncfails_ptr: number of step failures.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetActualInitStep(void* firkode_mem, sunrealtype* hinused_ptr)
 
    Returns the value of the integration step size used on the first step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hinused_ptr`` -- actual value of initial step size.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hinused_ptr: actual value of initial step size.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Even if the value of the initial integration step size was specified by
@@ -2270,51 +2292,54 @@ Main solver optional output functions
 
    Returns the integration step size taken on the last internal step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hlast_ptr`` -- step size taken on the last internal step.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hlast_ptr: step size taken on the last internal step.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetCurrentStep(void* firkode_mem, sunrealtype* hcur_ptr)
 
    Returns the integration step size to be attempted on the next internal
    step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``hcur_ptr`` -- step size to be attempted on the next internal step.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param hcur_ptr: step size to be attempted on the next internal step.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetCurrentTime(void* firkode_mem, sunrealtype* tcur_ptr)
 
    Returns the current internal time reached by the solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tcur_ptr`` -- current internal time reached.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tcur_ptr: current internal time reached.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetCurrentState(void* firkode_mem, N_Vector* y_ptr)
 
    Returns a pointer to the current state vector, i.e., the solution at the
    current internal time.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``y_ptr`` -- pointer to the current state vector.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param y_ptr: pointer to the current state vector.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The vector is owned by FIRKODE and must not be modified or freed by the
@@ -2325,39 +2350,41 @@ Main solver optional output functions
    Returns the current value of the scalar :math:`\gamma` in the matrix
    :math:`M - \gamma J`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``gamma_ptr`` -- the current value of :math:`\gamma`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param gamma_ptr: the current value of :math:`\gamma`.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetTolScaleFactor(void* firkode_mem, sunrealtype* tolsfac_ptr)
 
    Returns a suggested factor by which the user's tolerances should be
    scaled when too much accuracy has been requested for some internal step.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tolsfac_ptr`` -- suggested scaling factor for user-supplied tolerances.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tolsfac_ptr: suggested scaling factor for user-supplied tolerances.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetErrWeights(void* firkode_mem, N_Vector eweight)
 
    Returns the solution error weights at the current time. These are the
    reciprocals of the :math:`W_i` given by :eq:`FIRKODE_errwt`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``eweight`` -- solution error weights at the current time.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param eweight: solution error weights at the current time.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The user must allocate memory for ``eweight``.
@@ -2366,13 +2393,13 @@ Main solver optional output functions
 
    Returns the vector of estimated local errors of the last step attempt.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``ele`` -- estimated local errors.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param ele: estimated local errors.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The user must allocate memory for ``ele``. The values returned in
@@ -2391,70 +2418,74 @@ Main solver optional output functions
 
    Returns the main integrator statistics as a group.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nsteps_ptr`` -- number of steps taken by FIRKODE.
-      - ``nfevals_ptr`` -- number of calls to the user's ``f`` function.
-      - ``nlinsetups_ptr`` -- number of calls made to the linear solver setup function.
-      - ``netfails_ptr`` -- number of error test failures.
-      - ``hinused_ptr`` -- actual value of initial step size.
-      - ``hlast_ptr`` -- step size taken on the last internal step.
-      - ``hcur_ptr`` -- step size to be attempted on the next internal step.
-      - ``tcur_ptr`` -- current internal time reached.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nsteps_ptr: number of steps taken by FIRKODE.
+   :param nfevals_ptr: number of calls to the user's ``f`` function.
+   :param nlinsetups_ptr: number of calls made to the linear solver setup function.
+   :param netfails_ptr: number of error test failures.
+   :param hinused_ptr: actual value of initial step size.
+   :param hlast_ptr: step size taken on the last internal step.
+   :param hcur_ptr: step size to be attempted on the next internal step.
+   :param tcur_ptr: current internal time reached.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output values have been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output values have been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetUserData(void* firkode_mem, void** user_data_ptr)
 
    Returns the user data pointer set with :c:func:`FIRKodeSetUserData`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``user_data_ptr`` -- the user data pointer.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param user_data_ptr: the user data pointer.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodePrintAllStats(void* firkode_mem, FILE* outfile, SUNOutputFormat fmt)
 
    Outputs all of the integrator, nonlinear solver, linear solver, mass
    matrix solver, and rootfinding statistics.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``outfile`` -- pointer to output file.
-      - ``fmt`` -- the output format: ``SUN_OUTPUTFORMAT_TABLE`` for a human-readable table or ``SUN_OUTPUTFORMAT_CSV`` for comma-separated values.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param outfile: pointer to output file.
+   :param fmt: the output format: ``SUN_OUTPUTFORMAT_TABLE`` for a human-readable table or ``SUN_OUTPUTFORMAT_CSV`` for comma-separated values.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The output was successfully written.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- An invalid formatting option was provided.
+   :retval FIRK_SUCCESS: The output was successfully written.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: An invalid formatting option was provided.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeWriteParameters(void* firkode_mem, FILE* fp)
 
    Outputs all FIRKODE solver parameters to the provided file pointer.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``fp`` -- pointer to the output file.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param fp: pointer to the output file.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The parameters were successfully written.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The parameters were successfully written.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: char* FIRKodeGetReturnFlagName(long int flag)
 
    Returns the name of the FIRKODE constant corresponding to ``flag``.
 
-   **Arguments:**
-      - ``flag`` -- the flag returned by a call to a FIRKODE function.
+   :param flag: the flag returned by a call to a FIRKODE function.
 
-   **Return value:**
-      - A string containing the name of the corresponding constant. The
-        string is allocated with ``malloc`` and must be freed by the user.
+   :returns: A string containing the name of the corresponding constant. The
+      string is allocated with ``malloc`` and must be freed by the user.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_output.nls:
@@ -2466,38 +2497,41 @@ Nonlinear solver optional output functions
 
    Returns the number of Newton iterations performed.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nniters_ptr`` -- number of Newton iterations.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nniters_ptr: number of Newton iterations.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumNonlinSolvConvFails(void* firkode_mem, long int* nnfails_ptr)
 
    Returns the number of nonlinear solver convergence failures.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nnfails_ptr`` -- number of nonlinear convergence failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nnfails_ptr: number of nonlinear convergence failures.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNonlinSolvStats(void* firkode_mem, long int* nniters_ptr, long int* nnfails_ptr)
 
    Returns the nonlinear solver statistics as a group.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nniters_ptr`` -- number of Newton iterations.
-      - ``nnfails_ptr`` -- number of nonlinear convergence failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nniters_ptr: number of Newton iterations.
+   :param nnfails_ptr: number of nonlinear convergence failures.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output values have been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output values have been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetLastNonlinConvRate(void* firkode_mem, sunrealtype* theta_ptr)
 
@@ -2508,13 +2542,13 @@ Nonlinear solver optional output functions
    :c:func:`FIRKodeSetJacReuseConvRate` if the solve ended before the second
    iteration.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``theta_ptr`` -- the rate of convergence.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param theta_ptr: the rate of convergence.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_output.ls:
@@ -2533,14 +2567,14 @@ the coupled stage system.
    Returns the internally stored copy of the Jacobian matrix of the ODE
    right-hand side function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``J_ptr`` -- the Jacobian matrix.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param J_ptr: the Jacobian matrix.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       This function is provided for debugging purposes and the values in the
@@ -2552,41 +2586,44 @@ the coupled stage system.
    Returns the time at which the internally stored copy of the Jacobian
    matrix was evaluated.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``t_J_ptr`` -- the time at which the Jacobian was evaluated.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param t_J_ptr: the time at which the Jacobian was evaluated.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetJacNumSteps(void* firkode_mem, long int* nst_J_ptr)
 
    Returns the value of the internal step counter at the time the internally
    stored copy of the Jacobian matrix was evaluated.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nst_J_ptr`` -- the value of the internal step counter.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nst_J_ptr: the value of the internal step counter.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumJacEvals(void* firkode_mem, long int* njevals_ptr)
 
    Returns the number of calls made to the Jacobian approximation function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``njevals_ptr`` -- the number of calls to the Jacobian function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param njevals_ptr: the number of calls to the Jacobian function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumLinRhsEvals(void* firkode_mem, long int* nfevalsLS_ptr)
 
@@ -2594,14 +2631,14 @@ the coupled stage system.
    function due to the finite difference Jacobian approximation or finite
    difference Jacobian-vector product approximation.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nfevalsLS_ptr`` -- the number of calls made to the user-supplied right-hand side function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nfevalsLS_ptr: the number of calls made to the user-supplied right-hand side function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The value ``nfevalsLS_ptr`` is incremented only if the default internal
@@ -2612,84 +2649,90 @@ the coupled stage system.
    Returns the number of preconditioner evaluations, i.e., the number of
    calls made to ``pset``, whatever their ``jok`` argument.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``npevals_ptr`` -- the current number of calls to ``pset``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param npevals_ptr: the current number of calls to ``pset``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumPrecSolves(void* firkode_mem, long int* npsolves_ptr)
 
    Returns the cumulative number of calls made to the preconditioner solve
    function, ``psolve``.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``npsolves_ptr`` -- the current number of calls to ``psolve``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param npsolves_ptr: the current number of calls to ``psolve``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumLinIters(void* firkode_mem, long int* nliters_ptr)
 
    Returns the cumulative number of linear iterations performed by the user's
    iterative linear solver in block solves.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nliters_ptr`` -- the current number of linear iterations.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nliters_ptr: the current number of linear iterations.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumLinConvFails(void* firkode_mem, long int* nlcfails_ptr)
 
    Returns the cumulative number of convergence failures of the user's
    iterative linear solver in block solves.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nlcfails_ptr`` -- the current number of linear convergence failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nlcfails_ptr: the current number of linear convergence failures.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumJTSetupEvals(void* firkode_mem, long int* njtsetups_ptr)
 
    Returns the cumulative number of calls made to the Jacobian-vector setup
    function, ``jtsetup``.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``njtsetups_ptr`` -- the current number of calls to ``jtsetup``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param njtsetups_ptr: the current number of calls to ``jtsetup``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumJtimesEvals(void* firkode_mem, long int* njvevals_ptr)
 
    Returns the cumulative number of calls made to the Jacobian-vector
    function, ``jtimes`` (user-supplied or difference quotient).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``njvevals_ptr`` -- the current number of calls to ``jtimes``.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param njvevals_ptr: the current number of calls to ``jtimes``.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumBlockSolves(void* firkode_mem, long int* nbsolves_ptr)
 
@@ -2697,55 +2740,58 @@ the coupled stage system.
    the matrices :math:`M - \gamma J` performed by the user's linear solver
    (as preconditioner applications and for the error estimate).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nbsolves_ptr`` -- the current number of block linear solves.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nbsolves_ptr: the current number of block linear solves.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumStageLinIters(void* firkode_mem, long int* nsliters_ptr)
 
    Returns the cumulative number of iterations of the internal flexible GMRES
    solver on the coupled stage system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nsliters_ptr`` -- the current number of stage linear iterations.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nsliters_ptr: the current number of stage linear iterations.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumStageLinConvFails(void* firkode_mem, long int* nslcfails_ptr)
 
    Returns the cumulative number of convergence failures of the internal
    flexible GMRES solver on the coupled stage system.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nslcfails_ptr`` -- the current number of stage linear convergence failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nslcfails_ptr: the current number of stage linear convergence failures.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetLastLinFlag(void* firkode_mem, long int* flag_ptr)
 
    Returns the last return value from a FIRKLS routine.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``flag_ptr`` -- the value of the last return flag from a FIRKLS function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param flag_ptr: the value of the last return flag from a FIRKLS function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_LMEM_NULL`` -- The FIRKLS linear solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_LMEM_NULL: The FIRKLS linear solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       If the FIRKLS setup function failed when using the
@@ -2762,14 +2808,14 @@ the coupled stage system.
    constant, such as ``FIRK_ILL_INPUT``, which the setters of EXPERT options
    return in BEGINNER mode.
 
-   **Arguments:**
-      - ``flag`` -- the flag returned by a call to a FIRKLS function.
+   :param flag: the flag returned by a call to a FIRKLS function.
 
-   **Return value:**
-      - A string containing the name of the corresponding constant. If
-        ``1 <= flag <= N`` (LU factorization failed), this function returns
-        "NONE". The string is allocated with ``malloc`` and must be freed by
-        the user.
+   :returns: A string containing the name of the corresponding constant. If
+      ``1 <= flag <= N`` (LU factorization failed), this function returns
+      "NONE". The string is allocated with ``malloc`` and must be freed by
+      the user.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_output.mass:
@@ -2785,28 +2831,30 @@ matrix solver interface has not been initialized with
 
    Returns the mass matrix object supplied to :c:func:`FIRKodeSetMassLinearSolver`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``M_ptr`` -- the mass matrix (``NULL`` for a matrix-free mass linear solver).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param M_ptr: the mass matrix (``NULL`` for a matrix-free mass linear solver).
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassSetups(void* firkode_mem, long int* nmsetups_ptr)
 
    Returns the number of calls made to the mass matrix linear solver setup
    function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmsetups_ptr`` -- number of calls to the mass matrix solver setup function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmsetups_ptr: number of calls to the mass matrix solver setup function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassMultSetups(void* firkode_mem, long int* nmvsetups_ptr)
 
@@ -2814,110 +2862,117 @@ matrix solver interface has not been initialized with
    routines (the user-supplied ``mtsetup`` routine and the
    :c:func:`SUNMatMatvecSetup` routine of the mass matrix).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmvsetups_ptr`` -- number of calls to the mass matrix-vector product setup routines.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmvsetups_ptr: number of calls to the mass matrix-vector product setup routines.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassMult(void* firkode_mem, long int* nmvevals_ptr)
 
    Returns the number of mass matrix-vector products computed (with the
    user-supplied ``mtimes`` routine or with :c:func:`SUNMatMatvec`).
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmvevals_ptr`` -- number of mass matrix-vector products.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmvevals_ptr: number of mass matrix-vector products.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassSolves(void* firkode_mem, long int* nmsolves_ptr)
 
    Returns the number of linear solves with the mass matrix.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmsolves_ptr`` -- number of mass matrix linear solves.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmsolves_ptr: number of mass matrix linear solves.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassPrecEvals(void* firkode_mem, long int* nmpevals_ptr)
 
    Returns the number of calls made to the mass matrix preconditioner setup
    function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmpevals_ptr`` -- number of calls to the mass matrix preconditioner setup function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmpevals_ptr: number of calls to the mass matrix preconditioner setup function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassPrecSolves(void* firkode_mem, long int* nmpsolves_ptr)
 
    Returns the number of calls made to the mass matrix preconditioner solve
    function.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmpsolves_ptr`` -- number of calls to the mass matrix preconditioner solve function.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmpsolves_ptr: number of calls to the mass matrix preconditioner solve function.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassIters(void* firkode_mem, long int* nmiters_ptr)
 
    Returns the cumulative number of linear iterations performed by an
    iterative mass matrix linear solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmiters_ptr`` -- number of mass matrix linear iterations.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmiters_ptr: number of mass matrix linear iterations.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetNumMassConvFails(void* firkode_mem, long int* nmcfails_ptr)
 
    Returns the cumulative number of convergence failures of the mass matrix
    linear solver.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``nmcfails_ptr`` -- number of mass matrix linear solver convergence failures.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param nmcfails_ptr: number of mass matrix linear solver convergence failures.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
+
 
 .. c:function:: int FIRKodeGetLastMassFlag(void* firkode_mem, long int* flag_ptr)
 
    Returns the last return value from a mass matrix solver interface routine.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``flag_ptr`` -- the value of the last return flag.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param flag_ptr: the value of the last return flag.
 
-   **Return value:**
-      - ``FIRKLS_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRKLS_MEM_NULL`` -- The ``firkode_mem`` pointer is ``NULL``.
-      - ``FIRKLS_MASSMEM_NULL`` -- The mass matrix solver interface has not been initialized.
+   :retval FIRKLS_SUCCESS: The optional output value has been successfully set.
+   :retval FIRKLS_MEM_NULL: The ``firkode_mem`` pointer is ``NULL``.
+   :retval FIRKLS_MASSMEM_NULL: The mass matrix solver interface has not been initialized.
+
+   .. versionadded:: x.y.z
 
 
 .. _FIRKODE.Usage.optional_output.root:
@@ -2929,14 +2984,14 @@ Rootfinding optional output functions
 
    Returns an array showing which functions were found to have a root.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``rootsfound_1d`` -- array of length ``nrtfn`` with the indices of the user functions :math:`g_i` found to have a root. For :math:`i = 0, \ldots,` ``nrtfn`` :math:`-1`, ``rootsfound_1d[i]`` is nonzero if :math:`g_i` has a root, and 0 if not.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param rootsfound_1d: array of length ``nrtfn`` with the indices of the user functions :math:`g_i` found to have a root. For :math:`i = 0, \ldots,` ``nrtfn`` :math:`-1`, ``rootsfound_1d[i]`` is nonzero if :math:`g_i` has a root, and 0 if not.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_ILL_INPUT`` -- Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_ILL_INPUT: Rootfinding has not been activated through a call to :c:func:`FIRKodeRootInit`.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Note that, for the components :math:`g_i` for which a root was found,
@@ -2950,13 +3005,18 @@ Rootfinding optional output functions
    Returns the cumulative number of calls made to the user's root function
    :math:`g`.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``ngevals_ptr`` -- number of calls made to the user's function :math:`g` thus far (zero if rootfinding is not active).
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param ngevals_ptr: number of calls made to the user's function :math:`g` thus far (zero if rootfinding is not active).
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The optional output value has been successfully set.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
+   :retval FIRK_SUCCESS: The optional output value has been successfully set.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+
+   .. versionadded:: x.y.z
+
+   **Notes:**
+      The count accumulates across calls to :c:func:`FIRKodeReset`, like
+      every other counter of FIRKODE, and restarts at zero with
+      :c:func:`FIRKodeReInit`. ARKODE and CVODE restart it at every reset.
 
 
 .. _FIRKODE.Usage.reinit:
@@ -2987,16 +3047,16 @@ tolerance function must be called after :c:func:`FIRKodeReInit`.
    The function :c:func:`FIRKodeReInit` provides required problem
    specifications and reinitializes FIRKODE.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``t0`` -- is the initial value of :math:`t`.
-      - ``y0`` -- is the initial value of :math:`y`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param t0: is the initial value of :math:`t`.
+   :param y0: is the initial value of :math:`y`.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_NO_MALLOC`` -- Memory space for the FIRKODE memory block was not allocated through a previous call to :c:func:`FIRKodeInit`.
-      - ``FIRK_ILL_INPUT`` -- An input argument to :c:func:`FIRKodeReInit` has an illegal value.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_NO_MALLOC: Memory space for the FIRKODE memory block was not allocated through a previous call to :c:func:`FIRKodeInit`.
+   :retval FIRK_ILL_INPUT: An input argument to :c:func:`FIRKodeReInit` has an illegal value.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       All counters, of the integrator and of the linear, stage and mass
@@ -3012,16 +3072,16 @@ tolerance function must be called after :c:func:`FIRKodeReInit`.
    given independent variable value and dependent variable vector, while
    retaining all optional inputs and integrator statistics.
 
-   **Arguments:**
-      - ``firkode_mem`` -- pointer to the FIRKODE memory block.
-      - ``tR`` -- the value of the independent variable :math:`t`.
-      - ``yR`` -- the value of the dependent variable vector :math:`y(t_R)`.
+   :param firkode_mem: pointer to the FIRKODE memory block.
+   :param tR: the value of the independent variable :math:`t`.
+   :param yR: the value of the dependent variable vector :math:`y(t_R)`.
 
-   **Return value:**
-      - ``FIRK_SUCCESS`` -- The call was successful.
-      - ``FIRK_MEM_NULL`` -- The FIRKODE memory block was not initialized.
-      - ``FIRK_NO_MALLOC`` -- Memory space for the FIRKODE memory block was not allocated through a previous call to :c:func:`FIRKodeInit`.
-      - ``FIRK_ILL_INPUT`` -- An input argument to :c:func:`FIRKodeReset` has an illegal value.
+   :retval FIRK_SUCCESS: The call was successful.
+   :retval FIRK_MEM_NULL: The FIRKODE memory block was not initialized.
+   :retval FIRK_NO_MALLOC: Memory space for the FIRKODE memory block was not allocated through a previous call to :c:func:`FIRKodeInit`.
+   :retval FIRK_ILL_INPUT: An input argument to :c:func:`FIRKodeReset` has an illegal value.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       By default the next call to :c:func:`FIRKodeEvolve` will use the

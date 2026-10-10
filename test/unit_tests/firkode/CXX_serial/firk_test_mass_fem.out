@@ -1,9 +1,9 @@
 Mass matrix scaling test, P1 FEM heat equation with Radau IIA s = 3
 rtol = 1e-06, atol = 1e-10:
-  N =  401: nst = 10, nni = 12, stage linear iters = 41, max error = 8.9e-09
-  N = 1601: nst = 11, nni = 13, stage linear iters = 51, max error = 1.2e-08
+  N =  401: nst = 10, nni = 12, max error = 8.9e-09
+  N = 1601: nst = 11, nni = 13, max error = 1.2e-08
 rtol = 1e-08, atol = 1e-12:
-  N =  401: nst = 32, nni = 45, stage linear iters = 199, max error = 2.8e-11
-  N = 1601: nst = 32, nni = 46, stage linear iters = 203, max error = 2.9e-11
+  N =  401: nst = 32, nni = 45, max error = 2.8e-11
+  N = 1601: nst = 32, nni = 46, max error = 2.9e-11
 
 All tests passed

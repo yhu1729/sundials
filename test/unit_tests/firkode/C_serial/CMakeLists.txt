@@ -31,6 +31,7 @@ set(FIRKODE_unit_tests
     "firk_test_firkls\;"
     "firk_test_getuserdata\;"
     "firk_test_hnil\;"
+    "firk_test_io\;"
     "firk_test_mode\;"
     "firk_test_newton\;"
     "firk_test_nlscoef\;"

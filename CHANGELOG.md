@@ -9,9 +9,8 @@ Added a new, experimental package, FIRKODE, that integrates stiff ODE systems
 version 0.1.0, numbered independently of SUNDIALS, provides the three-stage
 method of order five, the method of RADAU5, with its simplified Newton
 iteration, filtered error estimate, predictive step size controller, Newton
-tolerance and Jacobian reuse policy; the other stage counts (orders 1 to 17)
-are planned for later versions. The coupled stage equations are solved on the
-stacked stage system by an internal flexible GMRES iteration preconditioned
+tolerance and Jacobian reuse policy. The coupled stage equations are solved on
+the stacked stage system by an internal flexible GMRES iteration preconditioned
 block-wise with any SUNDIALS `SUNLinearSolver` (direct, matrix-based iterative,
 or matrix-free), so that only systems of the size of the ODE are ever factored.
 FIRKODE provides `SUNAdaptController`-based step size adaptivity, collocation

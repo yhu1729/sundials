@@ -114,6 +114,14 @@ constants.
    +-------------------------------+-----+---------------------------------------------------------------------+
    | ``FIRK_RTFUNC_FAIL``          | -12 | The rootfinding function failed in an unrecoverable manner.         |
    +-------------------------------+-----+---------------------------------------------------------------------+
+   | ``FIRK_MASSINIT_FAIL``        | -14 | The mass matrix solver's initialization function failed.            |
+   +-------------------------------+-----+---------------------------------------------------------------------+
+   | ``FIRK_MASSSETUP_FAIL``       | -15 | The mass matrix solver's setup function failed.                     |
+   +-------------------------------+-----+---------------------------------------------------------------------+
+   | ``FIRK_MASSSOLVE_FAIL``       | -16 | The mass matrix solve failed in an unrecoverable manner.            |
+   +-------------------------------+-----+---------------------------------------------------------------------+
+   | ``FIRK_MASSMULT_FAIL``        | -18 | The mass matrix-vector product failed.                              |
+   +-------------------------------+-----+---------------------------------------------------------------------+
    | ``FIRK_MEM_FAIL``             | -20 | A memory allocation failed.                                         |
    +-------------------------------+-----+---------------------------------------------------------------------+
    | ``FIRK_MEM_NULL``             | -21 | The ``firkode_mem`` argument was ``NULL``.                          |
@@ -133,29 +141,9 @@ constants.
    +-------------------------------+-----+---------------------------------------------------------------------+
    | ``FIRK_VECTOROP_ERR``         | -28 | A vector operation failed.                                          |
    +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_CONTEXT_ERR``          | -32 | Reserved (:c:func:`FIRKodeCreate` returns ``NULL`` for a ``NULL``   |
-   |                               |     | ``SUNContext``).                                                    |
+   | ``FIRK_TABLE_FAIL``           | -44 | No built-in coefficient table exists for the number of stages.      |
    +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_MASSINIT_FAIL``        | -40 | The mass matrix solver's initialization function failed.            |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_MASSSETUP_FAIL``       | -41 | The mass matrix solver's setup function failed.                     |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_MASSSOLVE_FAIL``       | -42 | The mass matrix solve failed in an unrecoverable manner.            |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_MASSFREE_FAIL``        | -43 | Reserved for the mass matrix solver's free function.                |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_MASSMULT_FAIL``        | -44 | The mass matrix-vector product failed.                              |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_INVALID_TABLE``        | -45 | A coefficient table is invalid (reserved for user tables).          |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_TABLE_FAIL``           | -46 | No built-in coefficient table exists for the number of stages.      |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_CONTROLLER_ERR``       | -47 | A call to the time step adaptivity controller failed.               |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_STEPPER_ERR``          | -48 | An error occurred in the SUNStepper interface (reserved).           |
-   +-------------------------------+-----+---------------------------------------------------------------------+
-   | ``FIRK_ORDER_CHANGE_FAIL``    | -49 | A change of the number of stages failed (reserved for order         |
-   |                               |     | selection).                                                         |
+   | ``FIRK_CONTROLLER_ERR``       | -50 | A call to the time step adaptivity controller failed.               |
    +-------------------------------+-----+---------------------------------------------------------------------+
    | ``FIRK_UNRECOGNIZED_ERR``     | -99 | An unrecognized error occurred.                                     |
    +-------------------------------+-----+---------------------------------------------------------------------+

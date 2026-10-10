@@ -39,17 +39,17 @@ The user must provide a function of type defined as follows:
    system :math:`M \dot{y} = f(t,y)` for a given value of the independent
    variable :math:`t` and state vector :math:`y`.
 
-   **Arguments:**
-      - ``t`` -- is the current value of the independent variable.
-      - ``y`` -- is the current value of the dependent variable vector, :math:`y(t)`.
-      - ``ydot`` -- is the output vector :math:`f(t,y)`.
-      - ``user_data`` -- is the ``user_data`` pointer passed to :c:func:`FIRKodeSetUserData`.
+   :param t: is the current value of the independent variable.
+   :param y: is the current value of the dependent variable vector, :math:`y(t)`.
+   :param ydot: is the output vector :math:`f(t,y)`.
+   :param user_data: is the ``user_data`` pointer passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      A :c:type:`FIRKRhsFn` should return 0 if successful, a positive value if
+   :returns: A :c:type:`FIRKRhsFn` should return 0 if successful, a positive value if
       a recoverable error occurred (in which case FIRKODE will attempt to
       correct), or a negative value if it failed unrecoverably (in which case
       the integration is halted and ``FIRK_RHSFUNC_FAIL`` is returned).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Allocation of memory for ``ydot`` is handled within FIRKODE.
@@ -90,13 +90,13 @@ user may provide a function of type :c:type:`FIRKEwtFn` to compute a vector
 
    This function computes the WRMS error weights for the vector :math:`y`.
 
-   **Arguments:**
-      - ``y`` -- the value of the dependent variable vector at which the weight vector is to be computed.
-      - ``ewt`` -- the output vector containing the error weights.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param y: the value of the dependent variable vector at which the weight vector is to be computed.
+   :param ewt: the output vector containing the error weights.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      Should return 0 if successful, or -1 if unsuccessful.
+   :returns: Should return 0 if successful, or -1 if unsuccessful.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Allocation of memory for ``ewt`` is handled within FIRKODE.
@@ -121,16 +121,16 @@ defined as follows:
    This function implements a vector-valued function :math:`g(t,y)` such that
    the roots of the ``nrtfn`` components :math:`g_i(t,y)` are sought.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector, :math:`y(t)`.
-      - ``gout_1d`` -- the output array of length ``nrtfn`` with components :math:`g_i(t,y)`.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector, :math:`y(t)`.
+   :param gout_1d: the output array of length ``nrtfn`` with components :math:`g_i(t,y)`.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      A :c:type:`FIRKRootFn` should return 0 if successful or a non-zero
+   :returns: A :c:type:`FIRKRootFn` should return 0 if successful or a non-zero
       value if an error occurred (in which case the integration is halted and
       :c:func:`FIRKodeEvolve` returns ``FIRK_RTFUNC_FAIL``).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Allocation of memory for ``gout_1d`` is automatically handled within
@@ -151,21 +151,23 @@ approximation of it). :c:type:`FIRKLsJacFn` is defined as follows:
 
    This function computes the Jacobian matrix :math:`J = \dfrac{\partial f}{\partial y}` (or an approximation to it).
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``Jac`` -- the output Jacobian matrix.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
-      - ``tmp1, tmp2, tmp3`` -- are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsJacFn` function as temporary storage or work space.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param Jac: the output Jacobian matrix.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param tmp1: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsJacFn` function as temporary storage or work space.
+   :param tmp2: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsJacFn` function as temporary storage or work space.
+   :param tmp3: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsJacFn` function as temporary storage or work space.
 
-   **Return value:**
-      Should return 0 if successful, a positive value if a recoverable error
+   :returns: Should return 0 if successful, a positive value if a recoverable error
       occurred (in which case FIRKODE will attempt to correct, while FIRKLS
       sets ``last_flag`` to ``FIRKLS_JACFUNC_RECVR``), or a negative value if
       it failed unrecoverably (in which case the integration is halted,
       :c:func:`FIRKodeEvolve` returns ``FIRK_LSETUP_FAIL`` and FIRKLS sets
       ``last_flag`` to ``FIRKLS_JACFUNC_UNRECVR``).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Information regarding the structure of the specific ``SUNMatrix``
@@ -238,25 +240,27 @@ defined as follows:
    This function computes the linear system matrix :math:`\mathcal{A} = M -
    \gamma J` (or an approximation to it).
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``A`` -- the output linear system matrix.
-      - ``M`` -- the mass matrix supplied to :c:func:`FIRKodeSetMassLinearSolver`, or ``NULL`` if the mass matrix is the identity.
-      - ``jok`` -- an input flag indicating whether the Jacobian-related data needs to be updated. The ``jok`` argument provides for the reuse of Jacobian data. When ``jok = SUNFALSE``, the Jacobian-related data should be recomputed from scratch. When ``jok = SUNTRUE`` the Jacobian data, if saved from the previous call to this function, can be reused (with the current value of ``gamma``). A call with ``jok = SUNTRUE`` can only occur after a call with ``jok = SUNFALSE``.
-      - ``jcur_ptr`` -- a pointer to a flag which should be set to ``SUNTRUE`` if Jacobian data was recomputed, or set to ``SUNFALSE`` if Jacobian data was not recomputed, but saved data was still reused. FIRKODE records the value reported, also after a request with ``jok = SUNFALSE``, and its Jacobian reuse decisions rely on it: data reported as not recomputed is requested again when a step is retried after a convergence failure.
-      - ``gamma`` -- the scalar :math:`\gamma` appearing in the matrix :math:`\mathcal{A} = M - \gamma J`.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
-      - ``tmp1, tmp2, tmp3`` -- are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsLinSysFn` function as temporary storage or work space.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param A: the output linear system matrix.
+   :param M: the mass matrix supplied to :c:func:`FIRKodeSetMassLinearSolver`, or ``NULL`` if the mass matrix is the identity.
+   :param jok: an input flag indicating whether the Jacobian-related data needs to be updated. The ``jok`` argument provides for the reuse of Jacobian data. When ``jok = SUNFALSE``, the Jacobian-related data should be recomputed from scratch. When ``jok = SUNTRUE`` the Jacobian data, if saved from the previous call to this function, can be reused (with the current value of ``gamma``). A call with ``jok = SUNTRUE`` can only occur after a call with ``jok = SUNFALSE``.
+   :param jcur_ptr: a pointer to a flag which should be set to ``SUNTRUE`` if Jacobian data was recomputed, or set to ``SUNFALSE`` if Jacobian data was not recomputed, but saved data was still reused. FIRKODE records the value reported, also after a request with ``jok = SUNFALSE``, and its Jacobian reuse decisions rely on it: data reported as not recomputed is requested again when a step is retried after a convergence failure.
+   :param gamma: the scalar :math:`\gamma` appearing in the matrix :math:`\mathcal{A} = M - \gamma J`.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param tmp1: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsLinSysFn` function as temporary storage or work space.
+   :param tmp2: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsLinSysFn` function as temporary storage or work space.
+   :param tmp3: are pointers to memory allocated for variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsLinSysFn` function as temporary storage or work space.
 
-   **Return value:**
-      Should return 0 if successful, a positive value if a recoverable error
+   :returns: Should return 0 if successful, a positive value if a recoverable error
       occurred (in which case FIRKODE will attempt to correct, while FIRKLS
       sets ``last_flag`` to ``FIRKLS_JACFUNC_RECVR``), or a negative value if
       it failed unrecoverably (in which case the integration is halted,
       :c:func:`FIRKodeEvolve` returns ``FIRK_LSETUP_FAIL`` and FIRKLS sets
       ``last_flag`` to ``FIRKLS_JACFUNC_UNRECVR``).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Since the same matrix :math:`\mathcal{A}` is used as the block
@@ -284,19 +288,20 @@ matrix-based solvers, the product with the saved Jacobian matrix).
 
    This function computes the product :math:`Jv = \dfrac{\partial f(t,y)}{\partial y} v` (or an approximation to it).
 
-   **Arguments:**
-      - ``v`` -- the vector by which the Jacobian must be multiplied.
-      - ``Jv`` -- the output vector computed.
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
-      - ``tmp`` -- a pointer to memory allocated for a variable of type ``N_Vector`` which can be used for work space.
+   :param v: the vector by which the Jacobian must be multiplied.
+   :param Jv: the output vector computed.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param tmp: a pointer to memory allocated for a variable of type ``N_Vector`` which can be used for work space.
 
-   **Return value:**
-      The value returned by the Jacobian-vector product function should be 0
-      if successful. Any other return value will result in an unrecoverable
-      error of the Krylov solver, in which case the integration is halted.
+   :returns: The value returned by the Jacobian-vector product function should be 0
+      if successful, positive for a recoverable error (in which case the step
+      is retried with a smaller step size), or negative for an unrecoverable
+      error (in which case the integration is halted).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       This function must return a value of :math:`Jv` that uses the
@@ -327,17 +332,17 @@ defined as follows:
    This function preprocesses and/or evaluates Jacobian data needed by the
    Jacobian-times-vector routine.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      The value returned by the Jacobian-vector setup function should be 0 if
+   :returns: The value returned by the Jacobian-vector setup function should be 0 if
       successful, positive for a recoverable error (in which case the step
       will be retried), or negative for an unrecoverable error (in which case
       the integration is halted).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The arguments are the point :math:`(t_n, y_n)` at which the Newton
@@ -367,23 +372,23 @@ function must be of type :c:type:`FIRKLsPrecSolveFn`, defined as follows:
 
    This function solves the preconditioned system :math:`Pz = r`.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``r`` -- the right-hand side vector of the linear system.
-      - ``z`` -- the computed output vector.
-      - ``gamma`` -- the scalar :math:`\gamma` in the matrix given by :math:`\mathcal{A} = M - \gamma J`.
-      - ``delta`` -- an input tolerance to be used if an iterative method is employed in the solution. In that case, the residual vector :math:`Res = r - Pz` of the system should be made less than ``delta`` in the weighted :math:`l_2` norm, i.e., :math:`\sqrt{\sum_i (Res_i \cdot ewt_i)^2 } <` ``delta``. To obtain the ``N_Vector`` ``ewt``, call :c:func:`FIRKodeGetErrWeights`.
-      - ``lr`` -- an input flag indicating whether the preconditioner solve function is to use the left preconditioner (``lr = 1``) or the right preconditioner (``lr = 2``).
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param r: the right-hand side vector of the linear system.
+   :param z: the computed output vector.
+   :param gamma: the scalar :math:`\gamma` in the matrix given by :math:`\mathcal{A} = M - \gamma J`: the current value for the Newton system, and the value of the last call to the preconditioner setup function for the error estimate and for a block of the coupled stage system.
+   :param delta: an input tolerance to be used if an iterative method is employed in the solution. In that case, the residual vector :math:`Res = r - Pz` of the system should be made less than ``delta`` in the weighted :math:`l_2` norm, i.e., :math:`\sqrt{\sum_i (Res_i \cdot ewt_i)^2 } <` ``delta``. To obtain the ``N_Vector`` ``ewt``, call :c:func:`FIRKodeGetErrWeights`.
+   :param lr: an input flag indicating whether the preconditioner solve function is to use the left preconditioner (``lr = 1``) or the right preconditioner (``lr = 2``).
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      The value returned by the preconditioner solve function is a flag
+   :returns: The value returned by the preconditioner solve function is a flag
       indicating whether it was successful. This value should be 0 if
       successful, positive for a recoverable error (in which case the step
       will be retried), or negative for an unrecoverable error (in which case
       the integration is halted).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       When the user's linear solver is matrix-free and the method has more
@@ -415,21 +420,21 @@ function of type :c:type:`FIRKLsPrecSetupFn`, defined as follows:
 
    This function preprocesses and/or evaluates Jacobian-related data needed by the preconditioner.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``y`` -- the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
-      - ``fy`` -- the current value of the vector :math:`f(t,y)`.
-      - ``jok`` -- an input flag indicating whether the Jacobian-related data needs to be updated. The ``jok`` argument provides for the reuse of Jacobian data in the preconditioner solve function. ``jok = SUNFALSE`` means that the Jacobian-related data must be recomputed from scratch. ``jok = SUNTRUE`` means that the Jacobian data, if saved from the previous call to this function, can be reused (with the current value of :math:`\gamma`). A call with ``jok = SUNTRUE`` can only occur after a call with ``jok = SUNFALSE``.
-      - ``jcur_ptr`` -- a pointer to a flag which should be set to ``SUNTRUE`` if Jacobian data was recomputed, or set to ``SUNFALSE`` if Jacobian data was not recomputed, but saved data was still reused. FIRKODE records the value reported, also after a request with ``jok = SUNFALSE``, and its Jacobian reuse decisions rely on it: data reported as not recomputed is requested again when a step is retried after a convergence failure.
-      - ``gamma`` -- the scalar :math:`\gamma` appearing in the matrix :math:`\mathcal{A} = M - \gamma J`.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param y: the current value of the dependent variable vector, namely the solution :math:`y_n` at the beginning of the step.
+   :param fy: the current value of the vector :math:`f(t,y)`.
+   :param jok: an input flag indicating whether the Jacobian-related data needs to be updated. The ``jok`` argument provides for the reuse of Jacobian data in the preconditioner solve function. ``jok = SUNFALSE`` means that the Jacobian-related data must be recomputed from scratch. ``jok = SUNTRUE`` means that the Jacobian data, if saved from the previous call to this function, can be reused (with the current value of :math:`\gamma`). A call with ``jok = SUNTRUE`` can only occur after a call with ``jok = SUNFALSE``.
+   :param jcur_ptr: a pointer to a flag which should be set to ``SUNTRUE`` if Jacobian data was recomputed, or set to ``SUNFALSE`` if Jacobian data was not recomputed, but saved data was still reused. FIRKODE records the value reported, also after a request with ``jok = SUNFALSE``, and its Jacobian reuse decisions rely on it: data reported as not recomputed is requested again when a step is retried after a convergence failure.
+   :param gamma: the scalar :math:`\gamma` appearing in the matrix :math:`\mathcal{A} = M - \gamma J`.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      The value returned by the preconditioner setup function is a flag
+   :returns: The value returned by the preconditioner setup function is a flag
       indicating whether it was successful. This value should be 0 if
       successful, positive for a recoverable error (in which case the step
       will be retried), or negative for an unrecoverable error (in which case
       the integration is halted).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       The operations performed by this function might include forming a
@@ -461,20 +466,22 @@ mass matrix.
 
    This function computes the mass matrix :math:`M`.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable (the initial time, since the mass matrix is constant).
-      - ``M`` -- the output mass matrix.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
-      - ``tmp1, tmp2, tmp3`` -- pointers to memory allocated to variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsMassFn` as temporary storage or work space.
+   :param t: the current value of the independent variable (the initial time, since the mass matrix is constant).
+   :param M: the output mass matrix.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param tmp1: pointers to memory allocated to variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsMassFn` as temporary storage or work space.
+   :param tmp2: pointers to memory allocated to variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsMassFn` as temporary storage or work space.
+   :param tmp3: pointers to memory allocated to variables of type ``N_Vector`` which can be used by a :c:type:`FIRKLsMassFn` as temporary storage or work space.
 
-   **Return value:**
-      A :c:type:`FIRKLsMassFn` function should return 0 if successful, a
+   :returns: A :c:type:`FIRKLsMassFn` function should return 0 if successful, a
       positive value if a recoverable error occurred, or a negative value if
       it failed unrecoverably. Any nonzero return value causes
       :c:func:`FIRKodeEvolve` to return ``FIRK_MASSSETUP_FAIL`` (and FIRKLS
       sets ``last_flag`` to ``FIRKLS_MASSFUNC_RECVR`` or
       ``FIRKLS_MASSFUNC_UNRECVR``), since the mass matrix is constructed only
       once.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Information regarding the structure of the specific ``SUNMatrix``
@@ -507,16 +514,19 @@ product computed with :c:func:`SUNMatMatvec`.
 
    This function computes the product :math:`Mv`.
 
-   **Arguments:**
-      - ``v`` -- the vector to multiply.
-      - ``Mv`` -- the output vector computed.
-      - ``t`` -- the current value of the independent variable.
-      - ``mtimes_data`` -- a pointer to user data, the same as the ``mtimes_data`` parameter passed to :c:func:`FIRKodeSetMassTimes`.
+   :param v: the vector to multiply.
+   :param Mv: the output vector computed.
+   :param t: the current value of the independent variable.
+   :param mtimes_data: a pointer to user data, the same as the ``mtimes_data`` parameter passed to :c:func:`FIRKodeSetMassTimes`.
 
-   **Return value:**
-      The value returned by the mass matrix-vector product function should be
-      0 if successful. Any other return value will result in an unrecoverable
-      error, in which case the integration is halted.
+   :returns: The value returned by the mass matrix-vector product function should be
+      0 if successful. A nonzero value ends the current step: a positive value
+      returned to an iterative mass matrix solver is a recoverable error, after
+      which the step is retried with a smaller step size, while a negative
+      value, or any nonzero value from a product requested by FIRKODE itself,
+      halts the integration with ``FIRK_MASSMULT_FAIL``.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Mass matrix-vector products are required in every Newton residual
@@ -539,14 +549,14 @@ defined as follows:
    This function preprocesses and/or evaluates mass-matrix-related data
    needed by the mass matrix-vector product routine.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``mtimes_data`` -- a pointer to user data, the same as the ``mtimes_data`` parameter passed to :c:func:`FIRKodeSetMassTimes`.
+   :param t: the current value of the independent variable.
+   :param mtimes_data: a pointer to user data, the same as the ``mtimes_data`` parameter passed to :c:func:`FIRKodeSetMassTimes`.
 
-   **Return value:**
-      The value returned by the mass matrix-vector setup function should be 0
+   :returns: The value returned by the mass matrix-vector setup function should be 0
       if successful. Any other return value causes :c:func:`FIRKodeEvolve` to
       return ``FIRK_MASSSETUP_FAIL``.
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Since the mass matrix is constant, this function is called at most
@@ -567,19 +577,20 @@ approximates the mass matrix :math:`M`.
 
    This function solves the preconditioned system :math:`Pz = r`.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``r`` -- the right-hand side vector of the linear system.
-      - ``z`` -- the computed output vector.
-      - ``delta`` -- an input tolerance to be used if an iterative method is employed in the solution. In that case, the residual vector :math:`Res = r - Pz` of the system should be made less than ``delta`` in the weighted :math:`l_2` norm, i.e., :math:`\sqrt{\sum_i (Res_i \cdot ewt_i)^2 } <` ``delta``. To obtain the ``N_Vector`` ``ewt``, call :c:func:`FIRKodeGetErrWeights`.
-      - ``lr`` -- an input flag indicating whether the preconditioner solve function is to use the left preconditioner (``lr = 1``) or the right preconditioner (``lr = 2``).
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param r: the right-hand side vector of the linear system.
+   :param z: the computed output vector.
+   :param delta: an input tolerance to be used if an iterative method is employed in the solution. In that case, the residual vector :math:`Res = r - Pz` of the system should be made less than ``delta`` in the weighted :math:`l_2` norm, i.e., :math:`\sqrt{\sum_i (Res_i \cdot ewt_i)^2 } <` ``delta``. To obtain the ``N_Vector`` ``ewt``, call :c:func:`FIRKodeGetErrWeights`.
+   :param lr: an input flag indicating whether the preconditioner solve function is to use the left preconditioner (``lr = 1``) or the right preconditioner (``lr = 2``).
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      The value returned by the preconditioner solve function is a flag
+   :returns: The value returned by the preconditioner solve function is a flag
       indicating whether it was successful. This value should be 0 if
       successful, positive for a recoverable error, or negative for an
       unrecoverable error (in which case the integration is halted).
+
+   .. versionadded:: x.y.z
+
 
 .. _FIRKODE.Usage.user_supplied.mpsetup:
 
@@ -595,15 +606,15 @@ function of type :c:type:`FIRKLsMassPrecSetupFn`, defined as follows:
    This function preprocesses and/or evaluates data needed by the mass
    matrix preconditioner.
 
-   **Arguments:**
-      - ``t`` -- the current value of the independent variable.
-      - ``user_data`` -- a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
+   :param t: the current value of the independent variable.
+   :param user_data: a pointer to user data, the same as the ``user_data`` parameter passed to :c:func:`FIRKodeSetUserData`.
 
-   **Return value:**
-      The value returned by the preconditioner setup function is a flag
+   :returns: The value returned by the preconditioner setup function is a flag
       indicating whether it was successful. This value should be 0 if
       successful, positive for a recoverable error, or negative for an
       unrecoverable error (in which case the integration is halted).
+
+   .. versionadded:: x.y.z
 
    **Notes:**
       Since the mass matrix is constant, this function is called at most

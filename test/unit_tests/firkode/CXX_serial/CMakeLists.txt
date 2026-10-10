@@ -38,9 +38,11 @@ set(unit_tests
     "firk_test_root.cpp\;\;exclude-single"
     "firk_test_vdp.cpp\;\;exclude-single")
 
-# Tests of Krylov paths, whose iteration counts differ across platforms, are
-# judged by their exit code only (design Table 11.1)
-set(nodiff_tests firk_test_krylov firk_test_mass firk_test_mass_fem_krylov)
+# Tests of Krylov paths, whose iteration counts differ across platforms, and
+# self-checking tests whose printed errors are at the tolerance or roundoff
+# level are judged by their exit code only (design Table 11.1)
+set(nodiff_tests firk_test_krylov firk_test_mass firk_test_mass_fem_krylov
+                 firk_test_robertson firk_test_root firk_test_vdp)
 
 # Add the build and install targets for each test
 foreach(test_tuple ${unit_tests})

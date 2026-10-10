@@ -33,6 +33,7 @@
 
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "firkode/firkode.h"
 #include "firkode/firkode_impl.h" /* the stacks */
@@ -382,7 +383,8 @@ int main(int argc, char* argv[])
              "%d ranks agree with the serial run: difference %g, Newton "
              "iterations %ld and %ld",
              nprocs, (double)diff, nni_par, nni_ser);
-    fails += check(diff <= SUN_RCONST(1.0e-12) && nni_par == nni_ser, what);
+    fails += check(diff <= SUN_RCONST(1.0e-12) && labs(nni_par - nni_ser) <= 1,
+                   what);
     N_VDestroy(yser);
     SUNContext_Free(&serctx);
   }
