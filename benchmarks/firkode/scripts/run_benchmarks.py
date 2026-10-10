@@ -2314,11 +2314,7 @@ def main() -> int:
         action="store_true",
         help="remove stale cell claims before running (after a worker died)",
     )
-    ap.add_argument(
-        "--verbose",
-        action="store_true",
-        help="use verbose output",
-    )
+    ap.add_argument("--verbose", action="store_true", help="use verbose output")
     ap.add_argument(
         "--machine-note",
         default="",
