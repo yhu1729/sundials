@@ -1020,7 +1020,7 @@ band woven into one routine. SUNDIALS separates the controller from the clamps.
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | exponents                              | $\frac{1}{4}$ on both errors, $s = 3$                                                                               | $k_1 = 0.98$, $k_2 = 0.95$ by default, with `ord` $= p + 1$                                           | $k_1 = k_2 = 1$ with $p = s$ in BEGINNER mode                                                                          |
 | minimum with the I-controller proposal | yes                                                                                                                 | no                                                                                                    | applied by FIRKODE in BEGINNER mode                                                                                    |
-| floor on the stored error              | $\max(10^{-2}, \mathrm{dsm})$ for the history                                                                       | none                                                                                                  | `dsm` floored at $10^{-10}$ before the call; the $10^{-2}$ history floor is not reproduced                             |
+| floor on the stored error              | $\max(10^{-2}, \mathrm{dsm})$ for the history                                                                       | none                                                                                                  | current `dsm` floored at $10^{-10}$; the default stores $\max(10^{-2}, \mathrm{dsm})$ on acceptance                             |
 | first steps                            | I-controller until history exists                                                                                   | I-controller until history exists                                                                     | same                                                                                                                   |
 | safety factor                          | $0.9 \min\Bigl(1, \frac{1 + 2m}{k_{\text{nls}} + 2m}\Bigr)$ on the I-controller, `SAFE` $= 0.9$ on `FACGUS`, inside | none                                                                                                  | $0.9$ on the controller's proposal, $\kappa$ on the I-controller minimum (BEGINNER); $\kappa$ on the proposal (EXPERT) |
 | ratio limits, dead band                | inside                                                                                                              | none                                                                                                  | applied to the proposal                                                                                                |
@@ -1032,8 +1032,10 @@ band woven into one routine. SUNDIALS separates the controller from the clamps.
 #### Verdict
 
 Delegate the proposal to `SUNAdaptController` with $p = s$ and apply RADAU5's rules
-afterwards (Section 4.7). BEGINNER default: `ImpGus` with $k_1 = k_2 = 1$. The $10^{-2}$ floor on the
-stored error is not reproduced and is listed as a deviation (Table 6.2).
+afterwards (Section 4.7). BEGINNER default: `ImpGus` with $k_1 = k_2 = 1$. The default
+controller stores $\max(10^{-2}, \mathrm{dsm})$ on accepted steps, as RADAU5 does. This
+history floor does not affect acceptance or the current-step proposal. Explicitly supplied
+controllers, including controllers selected by name, receive the actual accepted error.
 
 #### Reasons
 
@@ -1375,7 +1377,6 @@ counts or make nominally equal runs different accuracy requests.
 | initial step             | fixed default $10^{-6}$                                                                          | CVODE's heuristic (Section 4.8)                                                                                          | the first steps differ                                                                                 |
 | end of the integration   | lands on `XEND` with a shortened last step                                                       | interpolates at `tout` with the degree-$s$ collocation polynomial unless a stop time is set, which it then lands on      | the comparison harness sets the stop time                                                              |
 | stage solve              | exact, complex LU                                                                                | inexact FGMRES to $\epsilon_{stk} \epsilon_{\text{nls}}$                                                                 | Newton counts may differ by the inexactness; see [2000J]                                               |
-| controller history floor | stored error floored at $10^{-2}$                                                                | not floored                                                                                                              | second-order effect on the predictive controller                                                       |
 | error-test failures      | I-controller with safety                                                                         | same, plus the factor 0.3 after two consecutive failures                                                                 | rare                                                                                                   |
 | norm                     | RMS with scale $\mathrm{atol} + \mathrm{rtol} \lvert y_n \rvert$                                 | WRMS with the same weights                                                                                               | identical                                                                                              |
 
@@ -1692,7 +1693,7 @@ firkHandleNFlag(nls, &ncf):
   return PREDICT_AGAIN
 
 firkCompleteStep(dsm):
-  if not fixedstep: SUNAdaptController_UpdateH(C, h, dsm)  # eta from firkCheckTemporalError, computed before UpdateH; no second EstimateStep (H36)
+  if not fixedstep: SUNAdaptController_UpdateH(C, h, max(1e-2, dsm) if default_controller else dsm)  # eta computed before UpdateH (H36)
                     failure -> FIRK_CONTROLLER_ERR, the state of the last step intact
   yn <- yn + sum_j d_j Z_j                                  # in place, one linear combination; Radau IIA: d = e_s
   tn <- tn + h, snapped to tstop within roundoff; hu <- h; nst += 1

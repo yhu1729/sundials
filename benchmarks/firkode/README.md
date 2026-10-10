@@ -259,6 +259,29 @@ the worker CSV files every 60 s). `--validate` and the B3 logging run are not co
 Jacobian dumps of the B10 gate land in `results/<run-id>/jac/<problem>/` (not
 committed, like `reference/`, `logs/` and `claims/`).
 
+Family B6 isolates FIRKODE adaptive-step settings on Robertson, van der Pol
+and the 20 x 20 diurnal grid. It keeps `[default]` in BEGINNER mode and adds
+`[expert-default]` with the default settings in EXPERT mode. Every ablation
+uses EXPERT mode explicitly, so compare it with `[expert-default]` to avoid
+confounding a setting change with the different step-size formula. The
+`[periodic-default]`, `[periodic-msbp-1]` and `[periodic-msbp-50]` rows all
+use periodic reuse; compare the latter two with `[periodic-default]`, since
+`msbp` has no effect under the Radau5 reuse policy. The stacked linear-solve
+budget sweep uses `stage-epslin` 0.01, 0.05, 0.1 and 0.2. All variants run
+at tolerances 1e-5 through 1e-9 in decades to support comparisons at matched
+attained accuracy. The generated B6 ablation table's timing ratios use
+`[expert-default]` as their denominator, falling back to `[default]` for
+older data without the EXPERT baseline. The periodic `msbp` variants use
+`[periodic-default]` as their denominator when recorded, while
+`[periodic-default]` itself uses `[expert-default]`. The baseline is shown
+in each row; a failed or unreliable baseline gives `NA`. These ratios
+compare equal requested tolerances, so also compare the measured errors.
+Use a fresh results directory after changing solver defaults so resumed
+runs do not mix implementations.
+With logging level 4, FIRKODE records the controller and I-controller
+proposals, Newton iteration count and contraction rate, and the actual
+and stored accepted errors for diagnosing adaptive-step decisions.
+
 ### Parallel runs on a multi-core workstation
 
 ```bash

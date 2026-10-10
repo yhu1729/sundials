@@ -23,6 +23,10 @@
  *   SUN_ADAPTCONTROLLER_H without taking ownership, rejects a controller of
  *   any other type with FIRK_ILL_INPUT (keeping the current one), and
  *   reinstalls the owned default for C = NULL;
+ * - the default stores accepted errors with a floor of 1e-2, while the
+ *   current error estimate and explicitly selected controllers retain the
+ *   actual error; forward/backward steps and controller replacement obey
+ *   the same rule;
  * - FIRKodeSetAdaptControllerByName installs, owned by FIRKODE, the controller
  *   of each name of the Soderlind family (its parameters equal those of the
  *   constructor of that name), and rejects ImExGus, unknown names and NULL
@@ -121,6 +125,8 @@ static int check_types(SUNContext sunctx, void* mem)
                    SUNAdaptController_GetType(C0) == SUN_ADAPTCONTROLLER_H &&
                    owned(mem),
                  "the default controller is of type H and owned");
+  fails += check(((FIRKodeMem)mem)->hadapt_mem->floor_history,
+                 "the default controller floors stored errors");
   C_ref = SUNAdaptController_ImpGus(sunctx);
   if (C_ref == NULL ||
       SUNAdaptController_SetParams_ImpGus(C_ref, SUN_RCONST(1.0),
@@ -149,13 +155,14 @@ static int check_types(SUNContext sunctx, void* mem)
   C_pi = SUNAdaptController_PI(sunctx);
   if (C_pi == NULL) { return fails + 1; }
   fails += check(FIRKodeSetAdaptController(mem, C_pi) == FIRK_SUCCESS &&
-                   controller(mem) == C_pi && !owned(mem),
+                   controller(mem) == C_pi && !owned(mem) &&
+                   !((FIRKodeMem)mem)->hadapt_mem->floor_history,
                  "a user controller is installed and not owned");
 
   /* NULL reinstalls an owned default; the user's controller stays alive */
   fails += check(FIRKodeSetAdaptController(mem, NULL) == FIRK_SUCCESS &&
                    controller(mem) != NULL && controller(mem) != C_pi &&
-                   owned(mem),
+                   owned(mem) && ((FIRKodeMem)mem)->hadapt_mem->floor_history,
                  "NULL reinstalls the owned default");
   fails += check(SUNAdaptController_GetType(C_pi) == SUN_ADAPTCONTROLLER_H,
                  "the user controller is not freed");
@@ -215,12 +222,13 @@ static int check_names(SUNContext sunctx, void* mem)
     C_ref = create(sunctx, i);
     snprintf(what, sizeof(what), "the controller %s is installed and owned",
              names[i]);
-    fails += check(FIRKodeSetAdaptControllerByName(mem, names[i]) == FIRK_SUCCESS &&
-                     owned(mem) &&
-                     SUNAdaptController_GetType(controller(mem)) ==
-                       SUN_ADAPTCONTROLLER_H &&
-                     same_parameters(controller(mem), C_ref),
-                   what);
+    fails +=
+      check(FIRKodeSetAdaptControllerByName(mem, names[i]) == FIRK_SUCCESS &&
+              owned(mem) && !((FIRKodeMem)mem)->hadapt_mem->floor_history &&
+              SUNAdaptController_GetType(controller(mem)) ==
+                SUN_ADAPTCONTROLLER_H &&
+              same_parameters(controller(mem), C_ref),
+            what);
     SUNAdaptController_Destroy(C_ref);
   }
 
@@ -679,6 +687,146 @@ static int check_predictive(SUNContext sunctx)
   return fails;
 }
 
+/* The stored error floor belongs to the default controller, not to the
+   integrator's error test or to ownership of a controller. A constant RHS
+   gives a near-zero error in every precision and in either time direction. */
+static int f_constant(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
+{
+  (void)t;
+  (void)y;
+  (void)user_data;
+  N_VConst(ONE, ydot);
+  return 0;
+}
+
+static int check_history_floor(SUNContext sunctx, int selection,
+                               sunrealtype direction)
+{
+  int k, fails = 0;
+  sunrealtype tret, expected;
+  void* mem                          = NULL;
+  N_Vector y                         = NULL;
+  SUNMatrix A                        = NULL;
+  SUNLinearSolver LS                 = NULL;
+  SUNAdaptController user_controller = NULL;
+  SUNAdaptControllerContent_Soderlind content;
+  FIRKodeMem fm;
+  char what[160];
+
+  mem = FIRKodeCreate(sunctx);
+  y   = N_VNew_Serial(1, sunctx);
+  A   = SUNDenseMatrix(1, 1, sunctx);
+  if (mem == NULL || y == NULL || A == NULL)
+  {
+    fails++;
+    goto cleanup;
+  }
+  LS = SUNLinSol_Dense(y, A, sunctx);
+  if (LS == NULL)
+  {
+    fails++;
+    goto cleanup;
+  }
+  fm = (FIRKodeMem)mem;
+  N_VConst(ONE, y);
+  if (FIRKodeInit(mem, f_constant, SUN_RCONST(0.0), y) ||
+      FIRKodeSStolerances(mem, SUN_RCONST(1.0e-3), SUN_RCONST(1.0e-3)) ||
+      FIRKodeSetLinearSolver(mem, LS, A) ||
+      FIRKodeSetInitStep(mem, direction * SUN_RCONST(1.0e-3)))
+  {
+    fails++;
+    goto cleanup;
+  }
+  if (selection > 0 && FIRKodeSetMode(mem, FIRK_EXPERT))
+  {
+    fails++;
+    goto cleanup;
+  }
+  if (selection == 2)
+  {
+    user_controller = SUNAdaptController_ImpGus(sunctx);
+    if (user_controller == NULL ||
+        FIRKodeSetAdaptController(mem, user_controller))
+    {
+      fails++;
+      goto cleanup;
+    }
+  }
+  else if (selection == 3 && FIRKodeSetAdaptControllerByName(mem, "ImpGus"))
+  {
+    fails++;
+    goto cleanup;
+  }
+
+  for (k = 0; k < 3; k++)
+  {
+    if (FIRKodeEvolve(mem, direction * SUN_RCONST(10.0), y, &tret, FIRK_ONE_STEP))
+    {
+      fails++;
+      goto cleanup;
+    }
+    content  = (SUNAdaptControllerContent_Soderlind)controller(mem)->content;
+    expected = (selection < 2) ? SUN_RCONST(1.0e-2) : fm->dsm;
+    fails += check(fm->dsm < SUN_RCONST(1.0e-2),
+                   "the actual accepted error remains below the history floor");
+    fails += check(close_to(content->ep, expected),
+                   "only the default controller receives floored history");
+    fails += check(close_to(content->hp, fm->h),
+                   "history retains the signed accepted step");
+    snprintf(what, sizeof(what),
+             "the accepted solution matches the analytic solution: "
+             "y=%g, t=%g, error=%g",
+             (double)NV_Ith_S(y, 0), (double)tret,
+             (double)(NV_Ith_S(y, 0) - (ONE + tret)));
+    /* Inexact stage solves need not reproduce the constant solution to
+       roundoff; compare against the requested mixed tolerance. */
+    fails += check(SUNRabs(NV_Ith_S(y, 0) - (ONE + tret)) <=
+                     SUN_RCONST(1.0e-3) * (ONE + SUNRabs(ONE + tret)),
+                   what);
+  }
+
+  /* Reset clears history without changing which controller uses the floor. */
+  fails += check(FIRKodeReset(mem, tret, y) == FIRK_SUCCESS,
+                 "Reset succeeds with controller history");
+  if (FIRKodeSetInitStep(mem, direction * SUN_RCONST(1.0e-3)) ||
+      FIRKodeEvolve(mem, tret + direction, y, &tret, FIRK_ONE_STEP))
+  {
+    fails++;
+    goto cleanup;
+  }
+  content  = (SUNAdaptControllerContent_Soderlind)controller(mem)->content;
+  expected = (selection < 2) ? SUN_RCONST(1.0e-2) : fm->dsm;
+  fails += check(close_to(content->ep, expected),
+                 "the history policy survives Reset");
+
+  /* A rejected large step must not become the stored previous error. The
+     eventual accepted error above the floor is stored without alteration. */
+  N_VConst(ONE, y);
+  if (FIRKodeInit(mem, f_decay, SUN_RCONST(0.0), y) ||
+      FIRKodeSStolerances(mem, SUN_RCONST(1.0e-5), SUN_RCONST(1.0e-5)) ||
+      FIRKodeSetLinearSolver(mem, LS, A) ||
+      FIRKodeSetInitStep(mem, direction) ||
+      FIRKodeEvolve(mem, direction * SUN_RCONST(10.0), y, &tret, FIRK_ONE_STEP))
+  {
+    fails++;
+    goto cleanup;
+  }
+  content = (SUNAdaptControllerContent_Soderlind)controller(mem)->content;
+  fails +=
+    check(fm->netf > 0 && fm->dsm >= SUN_RCONST(1.0e-2) && fm->dsm <= ONE,
+          "a large step is rejected before an accepted error above the floor");
+  fails += check(close_to(content->ep, fm->dsm),
+                 "history stores the accepted error above the floor unchanged");
+
+cleanup:
+  FIRKodeFree(&mem);
+  if (user_controller != NULL) { SUNAdaptController_Destroy(user_controller); }
+  if (LS != NULL) { SUNLinSolFree(LS); }
+  if (A != NULL) { SUNMatDestroy(A); }
+  if (y != NULL) { N_VDestroy(y); }
+  return fails;
+}
+
 /* R18: the smallest step is 10 u |tn|. At t0 = 0.01 / u it is 0.1, much
    longer than the period of y = sin(1e3 (t - t0)), in every precision */
 static sunrealtype t0_fast = SUN_RCONST(0.0);
@@ -732,7 +880,7 @@ int main(void)
 {
   SUNContext sunctx = NULL;
   void* mem         = NULL;
-  int fails         = 0;
+  int fails         = 0, selection;
 
   if (SUNContext_Create(SUN_COMM_NULL, &sunctx)) { return 1; }
   if (SUNContext_PushErrHandler(sunctx, capture, NULL)) { return 1; }
@@ -747,6 +895,11 @@ int main(void)
   fails += check_call_order(sunctx, FIRK_BEGINNER);
   fails += check_call_order(sunctx, FIRK_EXPERT);
   fails += check_predictive(sunctx);
+  for (selection = 0; selection < 4; selection++)
+  {
+    fails += check_history_floor(sunctx, selection, ONE);
+    fails += check_history_floor(sunctx, selection, -ONE);
+  }
 #if !defined(SUNDIALS_SINGLE_PRECISION)
   fails += check_polynomial(sunctx);
 #endif

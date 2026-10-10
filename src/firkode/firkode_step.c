@@ -390,7 +390,7 @@ static int firkDoErrorTest(FIRKodeMem firk_mem, int* nflagPtr, int* nefPtr,
 static int firkCompleteStep(FIRKodeMem firk_mem, sunrealtype dsm)
 {
   int i, s, retval;
-  sunrealtype troundoff;
+  sunrealtype troundoff, dsm_history;
   N_Vector* atmp;
 
   s = firk_mem->s;
@@ -398,8 +398,19 @@ static int firkCompleteStep(FIRKodeMem firk_mem, sunrealtype dsm)
   /* notify the step size controller */
   if (!firk_mem->fixedstep && firk_mem->hadapt_mem->hcontroller != NULL)
   {
+    /* A very small previous error can suppress the predictive proposal on
+       the next step. RADAU5 floors only its stored accepted error; keep the
+       actual estimate for acceptance and the current-step proposal, and
+       preserve the UpdateH input of explicitly selected controllers. */
+    dsm_history = firk_mem->hadapt_mem->floor_history
+                    ? SUNMAX(dsm, DSM_HISTORY_FLOOR)
+                    : dsm;
+    SUNLogDebug(FIRK_LOGGER, "controller-history-update",
+                "history_dsm_actual = " SUN_FORMAT_G
+                ", history_dsm_stored = " SUN_FORMAT_G,
+                dsm, dsm_history);
     retval = SUNAdaptController_UpdateH(firk_mem->hadapt_mem->hcontroller,
-                                        firk_mem->h, dsm);
+                                        firk_mem->h, dsm_history);
     if (retval != SUN_SUCCESS)
     {
       firkProcessError(firk_mem, FIRK_CONTROLLER_ERR, __LINE__, __func__,

@@ -122,7 +122,7 @@ sunrealtype firkHminEff(FIRKodeMem firk_mem)
 int firkAdapt(FIRKodeMem firk_mem, sunrealtype dsm, sunbooleantype accepted)
 {
   int retval;
-  sunrealtype hcur, habs, kappa, h_I, h_C, hnew;
+  sunrealtype hcur, habs, kappa, h_I, h_C = ZERO, hnew;
   FIRKodeHAdaptMem hadapt_mem = firk_mem->hadapt_mem;
 
   hcur                 = firk_mem->h;
@@ -169,8 +169,11 @@ int firkAdapt(FIRKodeMem firk_mem, sunrealtype dsm, sunbooleantype accepted)
   }
 
   SUNLogDebug(FIRK_LOGGER, "new-step-before-bounds",
-              "h_I = " SUN_FORMAT_G ", h_acc_controller = " SUN_FORMAT_G, h_I,
-              hnew);
+              "h_I = " SUN_FORMAT_G ", h_C = " SUN_FORMAT_G
+              ", h_candidate = " SUN_FORMAT_G ", proposal_dsm = " SUN_FORMAT_G
+              ", proposal_accepted = %i, proposal_nni = %ld, proposal_theta = " SUN_FORMAT_G,
+              h_I, h_C, hnew, dsm, (int)accepted, firk_mem->nni_last,
+              firk_mem->theta);
 
   /* bounds on the step size growth and reduction */
   hnew = SUNMIN(hnew, hadapt_mem->etamax * habs);
@@ -279,6 +282,7 @@ int firkReplaceAdaptController(FIRKodeMem firk_mem, SUNAdaptController C,
                                sunbooleantype take_ownership)
 {
   int retval;
+  sunbooleantype use_default = (C == NULL);
 
   if (firk_mem->hadapt_mem->owncontroller &&
       (firk_mem->hadapt_mem->hcontroller != NULL))
@@ -316,7 +320,8 @@ int firkReplaceAdaptController(FIRKodeMem firk_mem, SUNAdaptController C,
   }
   else { firk_mem->hadapt_mem->owncontroller = take_ownership; }
 
-  firk_mem->hadapt_mem->hcontroller = C;
+  firk_mem->hadapt_mem->hcontroller   = C;
+  firk_mem->hadapt_mem->floor_history = use_default;
 
   return FIRK_SUCCESS;
 }

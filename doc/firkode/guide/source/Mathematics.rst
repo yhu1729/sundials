@@ -354,6 +354,14 @@ The default controller is the implicit Gustafsson controller of RADAU5
 :c:func:`FIRKodeSetAdaptController` in EXPERT mode (see
 :c:func:`FIRKodeSetMode`).
 
+On each accepted step, the default controller stores
+:math:`\max(10^{-2}, \mathrm{dsm})` as its previous error, following RADAU5.
+This prevents a nearly zero previous error from unnecessarily restricting
+the next predictive proposal. The error test and the current-step proposal
+use the actual estimate (with the :math:`10^{-10}` roundoff safeguard).
+Controllers explicitly supplied or selected by name receive the actual
+accepted error in their history updates.
+
 In BEGINNER mode the new step size is, as in RADAU5,
 :math:`\min(\mathrm{safety}\, |h_C|, h_I)` after an accepted step and
 :math:`h_I` after a rejected one, for which RADAU5 does not use the predictive

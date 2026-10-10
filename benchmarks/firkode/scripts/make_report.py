@@ -684,20 +684,38 @@ def ablation_table(rows):
         "FGMRES iters",
         "Jac",
         "setups",
-        "time / default",
+        "baseline",
+        "time / baseline",
     ]
     out = []
     groups = defaultdict(dict)
-    for r in ok_rows(rows):
+    for r in rows:
         groups[(r["problem"], r.get("params", ""), to_float(r.get("rtol")))][r["label"]] = r
     for (p, prm, rtol), variants in sorted(
         groups.items(), key=lambda kv: (kv[0][0], kv[0][1], -kv[0][2])
     ):
-        base = variants.get("FIRKODE s=3 [default]")
-        bt = to_float(base.get("time_median")) if base else math.nan
+        default_baseline = (
+            "FIRKODE s=3 [expert-default]"
+            if "FIRKODE s=3 [expert-default]" in variants
+            else "FIRKODE s=3 [default]"
+        )
         for label, r in sorted(
-            variants.items(), key=lambda kv: (kv[0] != "FIRKODE s=3 [default]", kv[0])
+            variants.items(), key=lambda kv: (kv[0] != default_baseline, kv[0])
         ):
+            if r.get("driver_flag") != "ok":
+                continue
+            baseline = default_baseline
+            if label in {
+                "FIRKODE s=3 [periodic-msbp-1]",
+                "FIRKODE s=3 [periodic-msbp-50]",
+            } and "FIRKODE s=3 [periodic-default]" in variants:
+                baseline = "FIRKODE s=3 [periodic-default]"
+            base = variants.get(baseline)
+            bt = (
+                to_float(base.get("time_median"))
+                if base and base.get("driver_flag") == "ok" and base.get("timing_reliable") == "1"
+                else math.nan
+            )
             t = to_float(r.get("time_median"))
             out.append(
                 [
@@ -711,10 +729,18 @@ def ablation_table(rows):
                     r.get("nsli"),
                     r.get("nje"),
                     r.get("nsetups"),
+                    baseline.replace("FIRKODE s=3 ", ""),
                     fmt(t / bt, 3) if bt > 0 and r.get("timing_reliable") == "1" else "NA",
                 ]
             )
-    return md_table(header, out)
+    return md_table(header, out) + (
+        "\nTiming ratios use [expert-default] when that baseline was recorded; "
+        "older data without it fall back to the BEGINNER [default] baseline. "
+        "Periodic msbp variants use [periodic-default] when recorded, isolating "
+        "the setup frequency; [periodic-default] itself uses [expert-default]. "
+        "A failed or unreliable baseline gives NA. Ratios compare equal requested "
+        "tolerances; assess measured error when comparing attained accuracy.\n"
+    )
 
 
 def parse_roots(text: str):

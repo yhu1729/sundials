@@ -1170,6 +1170,13 @@ has any effect in fixed-step mode.
       supplied with the order :math:`p = s` of the error estimate. The
       user-supplied controller is not freed by FIRKODE.
 
+      The default controller (also restored by passing ``NULL``) stores
+      accepted errors with a floor of :math:`10^{-2}`, as in RADAU5. This
+      floor affects only its history; acceptance and the current-step
+      proposal use the actual error estimate. Explicitly supplied
+      controllers and controllers selected by name receive the actual
+      accepted error without this history floor.
+
 .. c:function:: int FIRKodeSetAdaptControllerByName(void* firkode_mem, const char* cname)
 
    Creates a time step controller of the Soderlind family (see

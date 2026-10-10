@@ -22,6 +22,11 @@ and Python interfaces are not yet available.
 
 **New Features and Enhancements**
 
+FIRKODE's default predictive step size controller now floors stored accepted
+errors at :math:`10^{-2}`, following RADAU5, to avoid restricting growth after
+a nearly zero error estimate. Error-test acceptance and explicitly selected
+controllers continue to use the actual error estimate.
+
 Added the utility function, :c:func:`SUNFileFlush` for flushing file
 pointers. This is useful when using the Fortran 2003 interfaces.
 

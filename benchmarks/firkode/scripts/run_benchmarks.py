@@ -394,6 +394,7 @@ def cells_b5() -> list[Cell]:
 
 B6_VARIANTS = [
     ("default", []),
+    ("expert-default", []),
     ("trivial-predictor", ["--predictor", "trivial"]),
     ("no-refilter", ["--no-refilter"]),
     ("no-newton-safety", ["--no-newton-safety"]),
@@ -402,9 +403,12 @@ B6_VARIANTS = [
     ("controller-PI", ["--controller", "pi"]),
     ("controller-PID", ["--controller", "pid"]),
     ("controller-H0321", ["--controller", "h0321"]),
-    ("msbp-1", ["--msbp", "1"]),
-    ("msbp-50", ["--msbp", "50"]),
+    ("periodic-default", ["--reuse-policy", "periodic"]),
+    ("periodic-msbp-1", ["--reuse-policy", "periodic", "--msbp", "1"]),
+    ("periodic-msbp-50", ["--reuse-policy", "periodic", "--msbp", "50"]),
     ("stage-epslin-0.01", ["--stage-epslin", "0.01"]),
+    ("stage-epslin-0.05", ["--stage-epslin", "0.05"]),
+    ("stage-epslin-0.1", ["--stage-epslin", "0.1"]),
     ("stage-epslin-0.2", ["--stage-epslin", "0.2"]),
     ("stage-maxl-18", ["--stage-maxl", "18"]),
 ]
@@ -414,8 +418,13 @@ def cells_b6() -> list[Cell]:
     cells = []
     for p, prm in [("rober", {}), ("vdpol", {}), ("diurnal", {"mx": 20, "my": 20})]:
         for name, args in B6_VARIANTS:
-            for r in [1e-6, 1e-8]:
-                c = make_cell("B6", p, "firk3", r, prm, args, cap_s=600.0)
+            # EXPERT options change the step-size formula as well as the
+            # ablated setting. Keep a baseline with that same mode.
+            mode = "beginner" if name == "default" else "expert"
+            for r in rtol_grid(5, 9, half=False):
+                c = make_cell(
+                    "B6", p, "firk3", r, prm, ["--mode", mode] + args, cap_s=600.0
+                )
                 c.label = f"FIRKODE s=3 [{name}]"
                 cells.append(c)
     return cells

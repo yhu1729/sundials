@@ -88,6 +88,9 @@ extern "C" {
 /* error estimate floor */
 #define DSM_FLOOR SUN_RCONST(1.0e-10)
 
+/* RADAU5's floor on accepted errors stored by the default controller */
+#define DSM_HISTORY_FLOOR SUN_RCONST(1.0e-2)
+
 /* RADAU5's smallest step relative to |tn| (in units of the roundoff) */
 #define HMIN_REL_ROUNDOFF SUN_RCONST(10.0)
 
@@ -171,6 +174,7 @@ typedef struct FIRKodeHAdaptMemRec
 
   SUNAdaptController hcontroller; /* temporal error controller        */
   sunbooleantype owncontroller;   /* flag indicating ownership        */
+  sunbooleantype floor_history;   /* default controller's error floor */
 }* FIRKodeHAdaptMem;
 
 /*===============================================================
