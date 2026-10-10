@@ -2005,9 +2005,10 @@ class Progress:
         now = now or dt.datetime.now(dt.UTC)
         elapsed = (now - self.t0).total_seconds()
         pct = 100.0 * self.n_done / self.total if self.total else 100.0
+        width = len(str(self.total))
         return (
-            f"progress: {self.n_done}/{self.total} cells ({pct:.1f}%), "
-            f"elapsed {format_duration(elapsed)}"
+            f"progress: {self.n_done:>{width}}/{self.total} cells [{pct:5.1f}%], "
+            f"elapsed {format_duration(elapsed):>8}"
         )
 
 
