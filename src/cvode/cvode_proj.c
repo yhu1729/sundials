@@ -303,8 +303,15 @@ int cvDoProjection(CVodeMem cv_mem, int* nflagPtr, sunrealtype saved_t,
   if (proj_mem->err_proj) { errP = cv_mem->cv_ftemp; }
   else { errP = NULL; }
 
-  /* Copy acor into errP (if projecting the error) */
-  if (proj_mem->err_proj) { N_VScale(ONE, cv_mem->cv_acor, errP); }
+  /* Copy acor or the filtered acor into errP (if projecting the error) */
+  if (proj_mem->err_proj)
+  {
+    N_VScale(ONE,
+             (cv_mem->cv_stiff_error_filter
+                ? cv_mem->cv_acor_filtered
+                : cv_mem->cv_acor),
+             errP);
+  }
 
   /* Call the user projection function */
   retval = proj_mem->pfun(cv_mem->cv_tn, cv_mem->cv_y, acorP,
@@ -320,7 +327,9 @@ int cvDoProjection(CVodeMem cv_mem, int* nflagPtr, sunrealtype saved_t,
     /* Recompute acnrm to be used in error test (if projecting the error) */
     if (proj_mem->err_proj)
     {
-      cv_mem->cv_acnrm = N_VWrmsNorm(errP, cv_mem->cv_ewt);
+      *(cv_mem->cv_stiff_error_filter ? &cv_mem->cv_acnrm_filtered
+                                       : &cv_mem->cv_acnrm) =
+        N_VWrmsNorm(errP, cv_mem->cv_ewt);
     }
 
     /* The projection was successful, return now */

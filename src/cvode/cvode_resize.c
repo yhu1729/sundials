@@ -292,6 +292,12 @@ int CVodeResizeHistory(void* cvode_mem, sunrealtype* t_hist, N_Vector* y_hist,
     return CV_MEM_FAIL;
   }
 
+  if (cv_mem->cv_acor_filtered)
+  {
+    N_VDestroy(cv_mem->cv_acor_filtered);
+    cv_mem->cv_acor_filtered = N_VClone(cv_mem->cv_acor);
+  }
+
   N_VDestroy(cv_mem->cv_tempv);
   cv_mem->cv_tempv = N_VClone(y_hist[0]);
   if (!(cv_mem->cv_tempv))

@@ -86,6 +86,56 @@ int CVodeSetUserData(void* cvode_mem, void* user_data)
   return (CV_SUCCESS);
 }
 
+int CVodeSetStiffErrorFilter(void* cvode_mem, sunbooleantype onoff)
+{
+  CVodeMem cv_mem;
+
+  if (cvode_mem == NULL)
+  {
+    cvProcessError(NULL, CV_MEM_NULL, __LINE__, __func__, __FILE__, MSGCV_NO_MEM);
+    return (CV_MEM_NULL);
+  }
+
+  cv_mem = (CVodeMem)cvode_mem;
+
+  if (!onoff)
+  {
+    cv_mem->cv_stiff_error_filter = SUNFALSE;
+    return (CV_SUCCESS);
+  }
+
+  if (cv_mem->cv_lmm != CV_BDF)
+  {
+    cvProcessError(cv_mem, CV_ILL_INPUT, __LINE__, __func__, __FILE__,
+                   MSGCV_SET_STIFF_ERROR_FILTER);
+    return (CV_ILL_INPUT);
+  }
+
+  if (cv_mem->cv_MallocDone == SUNFALSE)
+  {
+    cvProcessError(cv_mem, CV_NO_MALLOC, __LINE__, __func__, __FILE__,
+                   MSGCV_NO_MALLOC);
+    return (CV_NO_MALLOC);
+  }
+
+  if (cv_mem->cv_acor_filtered == NULL)
+  {
+    cv_mem->cv_acor_filtered = N_VClone(cv_mem->cv_acor);
+    if (cv_mem->cv_acor_filtered == NULL)
+    {
+      cvProcessError(cv_mem, CV_MEM_FAIL, __LINE__, __func__, __FILE__,
+                     MSGCV_MEM_FAIL);
+      return (CV_MEM_FAIL);
+    }
+    cv_mem->cv_lrw += cv_mem->cv_lrw1;
+    cv_mem->cv_liw += cv_mem->cv_liw1;
+  }
+
+  cv_mem->cv_stiff_error_filter = onoff;
+
+  return (CV_SUCCESS);
+}
+
 /*
  * CVodeSetMonitorFn
  *
@@ -1472,7 +1522,14 @@ int CVodeGetEstLocalErrors(void* cvode_mem, N_Vector ele)
 
   cv_mem = (CVodeMem)cvode_mem;
 
-  N_VScale(ONE, cv_mem->cv_acor, ele);
+  if (cv_mem->cv_stiff_error_filter)
+  {
+    N_VScale(ONE, cv_mem->cv_acor_filtered, ele);
+  }
+  else
+  {
+    N_VScale(ONE, cv_mem->cv_acor, ele);
+  }
 
   return (CV_SUCCESS);
 }

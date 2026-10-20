@@ -421,6 +421,16 @@ typedef struct CVodeMemRec
   int cv_nscon;               /* counter for STALD method                     */
   long int cv_nor;            /* counter for number of order reductions       */
 
+  /*--------------------------------
+    Shampine-Baca Stiff Error Filter
+    --------------------------------*/
+
+  sunbooleantype cv_stiff_error_filter;
+  N_Vector cv_acor_filtered;
+  sunrealtype cv_acnrm_filtered;
+  sunrealtype cv_ddn_filtered;
+  sunrealtype cv_dup_filtered;
+
   /*----------------
     Rootfinding Data
     ----------------*/
@@ -715,6 +725,11 @@ int cvDiagSolve_updateM(const sunrealtype r, N_Vector M);
 #define MSGCV_BAD_T          "Illegal value for t." MSG_TIME_INT
 #define MSGCV_NO_ROOT        "Rootfinding was not initialized."
 #define MSGCV_NLS_INIT_FAIL  "The nonlinear solver's init routine failed."
+#define MSGCV_SET_STIFF_ERROR_FILTER \
+  "Attempt to use the stiff error filter with the CV_ADAMS method is illegal."
+#define MSGCV_STIFF_ERROR_FILTER_NO_LS \
+  "The stiff error filter requires a Newton-type nonlinear solver with an " \
+  "attached linear solver."
 
 /* CVode Error Messages */
 

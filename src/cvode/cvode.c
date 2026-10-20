@@ -189,6 +189,10 @@ static int cvCheckConstraints(CVodeMem cv_mem, int* nflagPtr,
 static int cvDoErrorTest(CVodeMem cv_mem, int* nflagPtr, sunrealtype saved_t,
                          int* nefPtr, sunrealtype* dsmPtr);
 
+/* Stiff error filter */
+static int cvStiffErrorFilterApply(CVodeMem cv_mem);
+static int cvStiffErrorFilterSolve(CVodeMem cv_mem, N_Vector b);
+
 /* Function called after a successful step */
 
 static void cvCompleteStep(CVodeMem cv_mem);
@@ -312,6 +316,11 @@ void* CVodeCreate(int lmm, SUNContext sunctx)
   cv_mem->cv_msbp             = MSBP_DEFAULT;
   cv_mem->cv_dgmax_lsetup     = DGMAX_LSETUP_DEFAULT;
   cv_mem->convfail            = CV_NO_FAILURES;
+  cv_mem->cv_stiff_error_filter = SUNFALSE;
+  cv_mem->cv_acor_filtered      = NULL;
+  cv_mem->cv_acnrm_filtered     = ZERO;
+  cv_mem->cv_ddn_filtered       = ZERO;
+  cv_mem->cv_dup_filtered       = ZERO;
 
   /* Initialize inequality constraint variables */
   cv_mem->cv_constraints         = NULL;
@@ -1995,6 +2004,14 @@ static void cvFreeVectors(CVodeMem cv_mem)
   cv_mem->cv_lrw -= (maxord + 8) * cv_mem->cv_lrw1;
   cv_mem->cv_liw -= (maxord + 8) * cv_mem->cv_liw1;
 
+  if (cv_mem->cv_acor_filtered)
+  {
+    N_VDestroy(cv_mem->cv_acor_filtered);
+    cv_mem->cv_acor_filtered = NULL;
+    cv_mem->cv_lrw -= cv_mem->cv_lrw1;
+    cv_mem->cv_liw -= cv_mem->cv_liw1;
+  }
+
   if (cv_mem->cv_VabstolMallocDone)
   {
     N_VDestroy(cv_mem->cv_Vabstol);
@@ -2113,6 +2130,15 @@ static int cvInitialSetup(CVodeMem cv_mem, sunrealtype tout)
     cvProcessError(cv_mem, CV_NLS_INIT_FAIL, __LINE__, __func__, __FILE__,
                    MSGCV_NLS_INIT_FAIL);
     return (CV_NLS_INIT_FAIL);
+  }
+
+  if (cv_mem->cv_stiff_error_filter &&
+      ((cv_mem->cv_lsolve == NULL) ||
+       (SUNNonlinSolGetType(cv_mem->NLS) != SUNNONLINEARSOLVER_ROOTFIND)))
+  {
+    cvProcessError(cv_mem, CV_ILL_INPUT, __LINE__, __func__, __FILE__,
+                   MSGCV_STIFF_ERROR_FILTER_NO_LS);
+    return (CV_ILL_INPUT);
   }
 
   /* Initialize projection data */
@@ -2509,7 +2535,15 @@ static int cvStep(CVodeMem cv_mem)
   /*  Finally, we rescale the acor array to be the
       estimated local error vector. */
 
-  N_VScale(cv_mem->cv_tq[2], cv_mem->cv_acor, cv_mem->cv_acor);
+  if (cv_mem->cv_stiff_error_filter)
+  {
+    N_VScale(cv_mem->cv_tq[2], cv_mem->cv_acor_filtered,
+             cv_mem->cv_acor_filtered);
+  }
+  else
+  {
+    N_VScale(cv_mem->cv_tq[2], cv_mem->cv_acor, cv_mem->cv_acor);
+  }
 
   SUNLogInfo(CV_LOGGER, "end-step-attempt",
              "status = success, dsm = " SUN_FORMAT_G, dsm);
@@ -3159,6 +3193,18 @@ static int cvNls(CVodeMem cv_mem, int nflag)
 
   /* solve successful */
 
+  if (cv_mem->cv_stiff_error_filter)
+  {
+    flag = cvStiffErrorFilterApply(cv_mem);
+    if (flag != CV_SUCCESS)
+    {
+      SUNLogInfo(CV_LOGGER, "end-nonlinear-solve",
+                 "status = failed error filter, flag = %i, iters = %li", flag,
+                 nni_inc);
+      return (flag);
+    }
+  }
+
   /* update the state based on the final correction from the nonlinear solver */
   N_VLinearSum(ONE, cv_mem->cv_zn[0], ONE, cv_mem->cv_acor, cv_mem->cv_y);
 
@@ -3422,6 +3468,97 @@ void cvRestore(CVodeMem cv_mem, sunrealtype saved_t)
 
 /*
  * -----------------------------------------------------------------
+ * Shampine-Baca stiff error filter
+ * -----------------------------------------------------------------
+ */
+
+static int cvStiffErrorFilterSolve(CVodeMem cv_mem, N_Vector b)
+{
+  int retval;
+
+  retval = cv_mem->cv_lsolve(cv_mem, b, cv_mem->cv_ewt, cv_mem->cv_y,
+                             cv_mem->cv_ftemp);
+  if (retval < 0) { return (CV_LSOLVE_FAIL); }
+  if (retval > 0) { return (SUN_NLS_CONV_RECVR); }
+  return (CV_SUCCESS);
+}
+
+static int cvStiffErrorFilterApply(CVodeMem cv_mem)
+{
+  int retval;
+  sunrealtype cquot;
+
+  if ((cv_mem->cv_lsolve == NULL) ||
+      (SUNNonlinSolGetType(cv_mem->NLS) != SUNNONLINEARSOLVER_ROOTFIND))
+  {
+    cvProcessError(cv_mem, CV_LSOLVE_FAIL, __LINE__, __func__, __FILE__,
+                   MSGCV_STIFF_ERROR_FILTER_NO_LS);
+    return (CV_LSOLVE_FAIL);
+  }
+
+  SUNLogInfo(CV_LOGGER, "begin-error-filter", "gamma = " SUN_FORMAT_G,
+             cv_mem->cv_gamma);
+
+  N_VScale(ONE, cv_mem->cv_acor, cv_mem->cv_acor_filtered);
+  retval = cvStiffErrorFilterSolve(cv_mem, cv_mem->cv_acor_filtered);
+  if (retval != CV_SUCCESS)
+  {
+    SUNLogInfo(CV_LOGGER, "end-error-filter", "status = failed, flag = %i",
+               retval);
+    return (retval);
+  }
+  cv_mem->cv_acnrm_filtered = N_VWrmsNorm(cv_mem->cv_acor_filtered,
+                                          cv_mem->cv_ewt);
+
+  cv_mem->cv_ddn_filtered = ZERO;
+  cv_mem->cv_dup_filtered = ZERO;
+
+  if (cv_mem->cv_qwait == 1)
+  {
+    if (cv_mem->cv_q > 1)
+    {
+      N_VLinearSum(ONE, cv_mem->cv_zn[cv_mem->cv_q], cv_mem->cv_l[cv_mem->cv_q],
+                   cv_mem->cv_acor, cv_mem->cv_tempv);
+      retval = cvStiffErrorFilterSolve(cv_mem, cv_mem->cv_tempv);
+      if (retval != CV_SUCCESS)
+      {
+        SUNLogInfo(CV_LOGGER, "end-error-filter", "status = failed, flag = %i",
+                   retval);
+        return (retval);
+      }
+      cv_mem->cv_ddn_filtered = N_VWrmsNorm(cv_mem->cv_tempv, cv_mem->cv_ewt);
+    }
+
+    if ((cv_mem->cv_q != cv_mem->cv_qmax) && (cv_mem->cv_saved_tq5 != ZERO))
+    {
+      cquot = (cv_mem->cv_tq[5] / cv_mem->cv_saved_tq5) *
+              SUNRpowerI(cv_mem->cv_h / cv_mem->cv_tau[1], cv_mem->cv_L);
+      N_VLinearSum(-cquot, cv_mem->cv_zn[cv_mem->cv_qmax], ONE, cv_mem->cv_acor,
+                   cv_mem->cv_tempv);
+      retval = cvStiffErrorFilterSolve(cv_mem, cv_mem->cv_tempv);
+      if (retval != CV_SUCCESS)
+      {
+        SUNLogInfo(CV_LOGGER, "end-error-filter", "status = failed, flag = %i",
+                   retval);
+        return (retval);
+      }
+      cv_mem->cv_dup_filtered = N_VWrmsNorm(cv_mem->cv_tempv, cv_mem->cv_ewt);
+    }
+  }
+
+  SUNLogInfo(CV_LOGGER, "end-error-filter",
+             "status = success, acnrm = " SUN_FORMAT_G
+             ", acnrm_filtered = " SUN_FORMAT_G ", ddn_filtered = " SUN_FORMAT_G
+             ", dup_filtered = " SUN_FORMAT_G,
+             N_VWrmsNorm(cv_mem->cv_acor, cv_mem->cv_ewt),
+             cv_mem->cv_acnrm_filtered, cv_mem->cv_ddn_filtered,
+             cv_mem->cv_dup_filtered);
+
+  return (CV_SUCCESS);
+}
+
+/*
+ * -----------------------------------------------------------------
  * Error Test
  * -----------------------------------------------------------------
  */
@@ -3455,7 +3592,9 @@ static int cvDoErrorTest(CVodeMem cv_mem, int* nflagPtr, sunrealtype saved_t,
   sunrealtype dsm;
   int retval;
 
-  dsm = cv_mem->cv_acnrm * cv_mem->cv_tq[2];
+  dsm = (cv_mem->cv_stiff_error_filter
+           ? cv_mem->cv_acnrm_filtered
+           : cv_mem->cv_acnrm) * cv_mem->cv_tq[2];
 
   /* If est. local error norm dsm passes test, return CV_SUCCESS */
   *dsmPtr = dsm;
@@ -3709,7 +3848,9 @@ static sunrealtype cvComputeEtaqm1(CVodeMem cv_mem)
   cv_mem->cv_etaqm1 = ZERO;
   if (cv_mem->cv_q > 1)
   {
-    ddn = N_VWrmsNorm(cv_mem->cv_zn[cv_mem->cv_q], cv_mem->cv_ewt) *
+    ddn = (cv_mem->cv_stiff_error_filter
+             ? cv_mem->cv_ddn_filtered
+             : N_VWrmsNorm(cv_mem->cv_zn[cv_mem->cv_q], cv_mem->cv_ewt)) *
           cv_mem->cv_tq[1];
     cv_mem->cv_etaqm1 = ONE /
                         (SUNRpowerR(BIAS1 * ddn, ONE / cv_mem->cv_q) + ADDON);
@@ -3732,11 +3873,17 @@ static sunrealtype cvComputeEtaqp1(CVodeMem cv_mem)
   if (cv_mem->cv_q != cv_mem->cv_qmax)
   {
     if (cv_mem->cv_saved_tq5 == ZERO) { return (cv_mem->cv_etaqp1); }
-    cquot = (cv_mem->cv_tq[5] / cv_mem->cv_saved_tq5) *
-            SUNRpowerI(cv_mem->cv_h / cv_mem->cv_tau[2], cv_mem->cv_L);
-    N_VLinearSum(-cquot, cv_mem->cv_zn[cv_mem->cv_qmax], ONE, cv_mem->cv_acor,
-                 cv_mem->cv_tempv);
-    dup = N_VWrmsNorm(cv_mem->cv_tempv, cv_mem->cv_ewt) * cv_mem->cv_tq[3];
+    if (!cv_mem->cv_stiff_error_filter)
+    {
+      cquot = (cv_mem->cv_tq[5] / cv_mem->cv_saved_tq5) *
+              SUNRpowerI(cv_mem->cv_h / cv_mem->cv_tau[2], cv_mem->cv_L);
+      N_VLinearSum(-cquot, cv_mem->cv_zn[cv_mem->cv_qmax], ONE, cv_mem->cv_acor,
+                   cv_mem->cv_tempv);
+    }
+    dup = (cv_mem->cv_stiff_error_filter
+             ? cv_mem->cv_dup_filtered
+             : N_VWrmsNorm(cv_mem->cv_tempv, cv_mem->cv_ewt)) *
+          cv_mem->cv_tq[3];
     cv_mem->cv_etaqp1 =
       ONE / (SUNRpowerR(BIAS3 * dup, ONE / (cv_mem->cv_L + 1)) + ADDON);
   }
