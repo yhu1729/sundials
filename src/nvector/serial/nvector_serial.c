@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include <nvector/nvector_serial.h>
+#include <nvector/nvector_acsl.h>
 #include <sundials/priv/sundials_context_impl.h>
 #include <sundials/priv/sundials_errors_impl.h>
 #include <sundials/sundials_core.h>
@@ -480,14 +481,7 @@ void N_VLinearSum_Serial(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
 }
 
 /*@
-  requires \valid_read(z);
-  requires \valid_read(NV_CONTENT_S(z));
-  requires NV_LENGTH_S(z) >= 0;
-  requires \valid(NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1));
-  requires \separated(
-    z,
-    NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1),
-    NV_CONTENT_S(z));
+  requires valid_vector_serial(z);
   assigns NV_DATA_S(z)[0 .. NV_LENGTH_S(z) - 1];
   ensures \forall integer k;
     0 <= k < NV_LENGTH_S(z)
@@ -1620,21 +1614,10 @@ SUNErrCode N_VBufUnpack_Serial(N_Vector x, void* buf)
  */
 
 /*@
-  requires \valid_read(x);
-  requires \valid_read(NV_CONTENT_S(x));
-  requires NV_LENGTH_S(x) >= 0;
-  requires \valid_read(NV_DATA_S(x) + (0 .. NV_LENGTH_S(x) - 1));
-  requires \valid_read(z);
-  requires \valid_read(NV_CONTENT_S(z));
+  requires valid_read_vector_serial(x);
+  requires valid_vector_serial(z);
+  requires separated_vector_serial(x, z);
   requires NV_LENGTH_S(z) >= NV_LENGTH_S(x);
-  requires \valid(NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1));
-  requires \separated(
-    x,
-    NV_DATA_S(x) + (0 .. NV_LENGTH_S(x) - 1),
-    NV_CONTENT_S(x),
-    z,
-    NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1),
-    NV_CONTENT_S(z));
   assigns NV_DATA_S(z)[0 .. NV_LENGTH_S(x) - 1];
   ensures \forall integer k;
     0 <= k < NV_LENGTH_S(x)
