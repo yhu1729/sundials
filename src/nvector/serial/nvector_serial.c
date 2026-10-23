@@ -1619,6 +1619,27 @@ SUNErrCode N_VBufUnpack_Serial(N_Vector x, void* buf)
  * -----------------------------------------------------------------
  */
 
+/*@
+  requires \valid_read(x);
+  requires \valid_read(NV_CONTENT_S(x));
+  requires NV_LENGTH_S(x) >= 0;
+  requires \valid_read(NV_DATA_S(x) + (0 .. NV_LENGTH_S(x) - 1));
+  requires \valid_read(z);
+  requires \valid_read(NV_CONTENT_S(z));
+  requires NV_LENGTH_S(z) >= NV_LENGTH_S(x);
+  requires \valid(NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1));
+  requires \separated(
+    x,
+    NV_DATA_S(x) + (0 .. NV_LENGTH_S(x) - 1),
+    NV_CONTENT_S(x),
+    z,
+    NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1),
+    NV_CONTENT_S(z));
+  assigns NV_DATA_S(z)[0 .. NV_LENGTH_S(x) - 1];
+  ensures \forall integer k;
+    0 <= k < NV_LENGTH_S(x)
+      ==> NV_DATA_S(z)[k] == NV_DATA_S(x)[k];
+*/
 static void VCopy_Serial(N_Vector x, N_Vector z)
 {
   sunindextype i, N;
@@ -1630,6 +1651,14 @@ static void VCopy_Serial(N_Vector x, N_Vector z)
   xd = NV_DATA_S(x);
   zd = NV_DATA_S(z);
 
+  /*@
+    loop invariant 0 <= i <= N;
+    loop invariant \forall integer k;
+      0 <= k < i
+        ==> zd[k] == \at(xd[k], LoopEntry);
+    loop assigns i, zd[0 .. N - 1];
+    loop variant N - i;
+  */
   for (i = 0; i < N; i++) { zd[i] = xd[i]; }
 
   return;

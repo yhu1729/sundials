@@ -61,6 +61,7 @@ done
 # Verification targets as "<source file relative to srcdir>:<function,...>"
 targets=(
     "src/nvector/serial/nvector_serial.c:N_VConst_Serial"
+    "src/nvector/serial/nvector_serial.c:VCopy_Serial"
 )
 
 logfile="$(mktemp)" || exit 1
