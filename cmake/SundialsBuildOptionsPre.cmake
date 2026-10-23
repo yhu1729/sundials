@@ -456,6 +456,10 @@ if((SUNDIALS_TEST_ENABLE_DEV_TESTS OR SUNDIALS_TEST_ENABLE_UNIT_TESTS)
 endif()
 
 sundials_option(
+  SUNDIALS_TEST_ENABLE_FRAMAC BOOL
+  "Enable Frama-C/WP proof tests" OFF ADVANCED)
+
+sundials_option(
   SUNDIALS_TEST_FLOAT_PRECISION STRING
   "Precision for floating point comparisons (number of digits)" "4" ADVANCED)
 

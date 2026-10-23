@@ -62,6 +62,19 @@ following CMake options.
 
    Default: ON (when unit tests are enabled)
 
+.. cmakeoption:: SUNDIALS_TEST_ENABLE_FRAMAC
+
+   Include tests that use the `Frama-C <https://frama-c.com>`__ WP plugin to
+   prove the ACSL contracts annotated in the SUNDIALS sources, including the
+   absence of runtime errors. Requires Frama-C with the WP plugin and the
+   Alt-Ergo and Z3 provers configured with Why3.
+
+   The proofs can also be run without CTest from the top-level source
+   directory with ``./scripts/frama-c.sh <build directory>`` given a
+   configured build directory.
+
+   Default: OFF
+
 Answer Files
 ------------
 

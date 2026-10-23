@@ -479,6 +479,20 @@ void N_VLinearSum_Serial(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   return;
 }
 
+/*@
+  requires \valid_read(z);
+  requires \valid_read(NV_CONTENT_S(z));
+  requires NV_LENGTH_S(z) >= 0;
+  requires \valid(NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1));
+  requires \separated(
+    z,
+    NV_DATA_S(z) + (0 .. NV_LENGTH_S(z) - 1),
+    NV_CONTENT_S(z));
+  assigns NV_DATA_S(z)[0 .. NV_LENGTH_S(z) - 1];
+  ensures \forall integer k;
+    0 <= k < NV_LENGTH_S(z)
+      ==> NV_DATA_S(z)[k] == c;
+*/
 void N_VConst_Serial(sunrealtype c, N_Vector z)
 {
   sunindextype i, N;
@@ -489,6 +503,14 @@ void N_VConst_Serial(sunrealtype c, N_Vector z)
   N  = NV_LENGTH_S(z);
   zd = NV_DATA_S(z);
 
+  /*@
+    loop invariant 0 <= i <= N;
+    loop invariant \forall integer k;
+      0 <= k < i
+        ==> zd[k] == c;
+    loop assigns i, zd[0 .. N - 1];
+    loop variant N - i;
+  */
   for (i = 0; i < N; i++) { zd[i] = c; }
 
   return;

@@ -245,6 +245,11 @@ if(SUNDIALS_TEST_ENABLE_UNIT_TESTS)
   add_subdirectory(test/unit_tests)
 endif()
 
+# Add Frama-C/WP proof tests to the build
+if(SUNDIALS_TEST_ENABLE_FRAMAC)
+  add_subdirectory(test/frama-c)
+endif()
+
 if(SUNDIALS_ENABLE_EXTERNAL_ADDONS)
   add_subdirectory(external)
 endif()
