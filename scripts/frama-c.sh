@@ -64,7 +64,7 @@ targets=(
     "src/nvector/serial/nvector_serial.c:VCopy_Serial"
 )
 
-logfile="$(mktemp)" || exit 1
+logfile="$(mktemp "${TMPDIR:-/tmp}/frama-c.XXXXXX")" || exit 1
 trap 'rm -f "${logfile}"' EXIT
 
 status=0
