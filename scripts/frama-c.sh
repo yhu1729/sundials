@@ -62,6 +62,7 @@ done
 targets=(
     "src/nvector/serial/nvector_serial.c:N_VConst_Serial"
     "src/nvector/serial/nvector_serial.c:VCopy_Serial"
+    "src/nvector/serial/nvector_serial.c:VNeg_Serial"
 )
 
 logfile="$(mktemp "${TMPDIR:-/tmp}/frama-c.XXXXXX")" || exit 1

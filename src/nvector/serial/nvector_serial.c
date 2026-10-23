@@ -1681,6 +1681,17 @@ static void VDiff_Serial(N_Vector x, N_Vector y, N_Vector z)
   return;
 }
 
+/*@
+  requires valid_read_vector_serial(x);
+  requires valid_vector_serial(z);
+  requires separated_vector_serial(x, z);
+  requires finite_vector_serial(x);
+  requires NV_LENGTH_S(z) >= NV_LENGTH_S(x);
+  assigns NV_DATA_S(z)[0 .. NV_LENGTH_S(x) - 1];
+  ensures \forall integer k;
+    0 <= k < NV_LENGTH_S(x)
+      ==> NV_DATA_S(z)[k] == -NV_DATA_S(x)[k];
+*/
 static void VNeg_Serial(N_Vector x, N_Vector z)
 {
   sunindextype i, N;
@@ -1692,6 +1703,14 @@ static void VNeg_Serial(N_Vector x, N_Vector z)
   xd = NV_DATA_S(x);
   zd = NV_DATA_S(z);
 
+  /*@
+    loop invariant 0 <= i <= N;
+    loop invariant \forall integer k;
+      0 <= k < i
+        ==> zd[k] == -\at(xd[k], LoopEntry);
+    loop assigns i, zd[0 .. N - 1];
+    loop variant N - i;
+  */
   for (i = 0; i < N; i++) { zd[i] = -xd[i]; }
 
   return;

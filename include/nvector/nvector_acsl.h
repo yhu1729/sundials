@@ -48,6 +48,11 @@
       y,
       NV_CONTENT_S(y),
       NV_DATA_S(y) + (0 .. NV_LENGTH_S(y) - 1));
+
+  predicate finite_vector_serial{L}(N_Vector x) =
+    \forall integer k;
+      0 <= k < NV_LENGTH_S(x)
+        ==> \is_finite(NV_DATA_S(x)[k]);
 */
 
 #endif
