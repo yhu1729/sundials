@@ -83,6 +83,7 @@ for target in "${targets[@]}"; do
         -wp-fct="${functions}" \
         -wp-prover="${provers}" \
         -wp-timeout="${timeout}" \
+        -wp-warn-key='*=inactive,hypothesis=active,pedantic-assigns=active,union=active' \
         "${srcdir}/${file}" \
         -then -report-classify \
         -report-unclassified-unknown=ERROR \
